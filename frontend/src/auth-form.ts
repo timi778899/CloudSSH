@@ -78,7 +78,7 @@ export class ConnectionForm {
 
     this.turnstileWidgetId = window.turnstile.render(container, {
       sitekey: this.turnstileSitekey,
-      theme: 'dark',
+      theme: 'light',
       callback: async (token: string) => {
         // Verify with backend and get cookie
         try {
@@ -111,62 +111,60 @@ export class ConnectionForm {
     const container = document.getElementById('connection-form-container')!;
 
     container.innerHTML = `
-      <form class="space-y-6" id="connection-form">
+      <form class="space-y-5" id="connection-form">
         <div class="grid grid-cols-4 gap-4">
           <div class="col-span-3">
-            <label class="block text-xs font-bold tracking-[0.1em] text-[#bbccb0] mb-2">HOST_ADDRESS</label>
+            <label class="block text-xs font-bold tracking-normal text-slate-500 mb-2">Host address</label>
             <div class="flex items-center">
-              <span class="text-[#bbccb0] mr-2">&gt;</span>
                <input id="host" class="terminal-input text-[13px]" placeholder="192.168.1.1 or 2001:db8::1" type="text" required>
             </div>
           </div>
           <div class="col-span-1">
-            <label class="block text-xs font-bold tracking-[0.1em] text-[#bbccb0] mb-2">PORT</label>
+            <label class="block text-xs font-bold tracking-normal text-slate-500 mb-2">Port</label>
             <div class="flex items-center">
-              <span class="text-[#bbccb0] mr-2">:</span>
               <input id="port" class="terminal-input text-[13px]" placeholder="22" type="text" value="22">
             </div>
           </div>
         </div>
         <div>
-          <label class="block text-xs font-bold tracking-[0.1em] text-[#bbccb0] mb-2">AUTH_USER</label>
+          <label class="block text-xs font-bold tracking-normal text-slate-500 mb-2">User name</label>
           <div class="flex items-center">
-            <span class="material-symbols-outlined text-[#bbccb0] mr-2" style="font-size: 16px;">person</span>
+            <span class="material-symbols-outlined text-slate-500 mr-2" style="font-size: 16px;">person</span>
             <input id="username" class="terminal-input text-[13px]" placeholder="admin" type="text" required>
           </div>
         </div>
         <div>
-          <label class="block text-xs font-bold tracking-[0.1em] text-[#bbccb0] mb-2">AUTH_METHOD</label>
+          <label class="block text-xs font-bold tracking-normal text-slate-500 mb-2">Authentication</label>
           <div class="flex gap-2 mb-3">
-            <button type="button" id="auth-tab-password" class="auth-tab px-3 py-1 text-[11px] font-bold tracking-[0.1em] border border-[#4af626] text-[#4af626] bg-transparent cursor-pointer transition-all" style="background:#4af626;color:#0a0a0a;">PASSWORD</button>
-            <button type="button" id="auth-tab-key" class="auth-tab px-3 py-1 text-[11px] font-bold tracking-[0.1em] border border-[#3c4b36] text-[#bbccb0] bg-transparent cursor-pointer transition-all">PRIVATE_KEY</button>
+            <button type="button" id="auth-tab-password" class="auth-tab px-3 py-2 text-[12px] font-semibold tracking-normal border border-blue-600 text-white bg-blue-600 rounded-md cursor-pointer transition-all">Password</button>
+            <button type="button" id="auth-tab-key" class="auth-tab px-3 py-2 text-[12px] font-semibold tracking-normal border border-slate-200 text-slate-500 bg-white rounded-md cursor-pointer transition-all">Private key</button>
           </div>
           <div id="auth-password-section">
             <div class="flex items-center">
-              <span class="material-symbols-outlined text-[#bbccb0] mr-2" style="font-size: 16px;">key</span>
+              <span class="material-symbols-outlined text-slate-500 mr-2" style="font-size: 16px;">key</span>
               <input id="password" class="terminal-input text-[13px]" placeholder="••••••••" type="password">
             </div>
           </div>
           <div id="auth-key-section" style="display:none;">
-            <textarea id="private-key" class="terminal-input text-[11px] w-full" rows="5" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----&#10;...粘贴 Ed25519 私钥内容...&#10;-----END OPENSSH PRIVATE KEY-----" style="resize:vertical;border:1px solid #3c4b36;padding:8px;"></textarea>
+            <textarea id="private-key" class="terminal-input text-[11px] w-full" rows="5" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----&#10;...粘贴 Ed25519 私钥内容...&#10;-----END OPENSSH PRIVATE KEY-----" style="resize:vertical;padding:10px 12px;"></textarea>
           </div>
         </div>
         <div id="turnstile-container" style="display:none;">
           <div id="turnstile-widget" class="flex justify-center"></div>
         </div>
         <div class="flex items-center gap-2 mt-2">
-          <input type="checkbox" id="remember-me" class="accent-[#4af626] w-4 h-4 cursor-pointer">
-          <label for="remember-me" class="text-xs text-[#bbccb0] cursor-pointer select-none">REMEMBER_CONNECTION</label>
+          <input type="checkbox" id="remember-me" class="accent-blue-600 w-4 h-4 cursor-pointer">
+          <label for="remember-me" class="text-xs text-slate-500 cursor-pointer select-none">Remember connection</label>
         </div>
         <div class="pt-4">
-          <button id="connect-btn" class="cyber-button w-full py-3 px-4 text-xs font-bold tracking-[0.1em] uppercase flex items-center justify-center gap-2 bg-[#4af626] text-[#022100]" type="button">
+          <button id="connect-btn" class="business-button w-full py-3 px-4 text-xs font-bold tracking-normal uppercase flex items-center justify-center gap-2 bg-blue-600 text-white" type="button">
             <span class="material-symbols-outlined" style="font-size: 18px;">power_settings_new</span>
-            Execute_Connection
+            Connect
           </button>
         </div>
         <div class="flex justify-between items-center mt-4">
-          <span id="status-text" class="text-[13px] text-[#bbccb0] flex items-center gap-1">
-            <span class="w-2 h-2 bg-[#353534] inline-block"></span> STATUS: OFFLINE
+          <span id="status-text" class="text-[13px] text-slate-500 flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-slate-300 inline-block"></span> Status: Offline
           </span>
         </div>
       </form>
@@ -199,16 +197,16 @@ export class ConnectionForm {
     const keySection = document.getElementById('auth-key-section')!;
 
     if (mode === 'password') {
-      pwTab.style.background = '#4af626'; pwTab.style.color = '#0a0a0a';
-      pwTab.style.borderColor = '#4af626';
-      keyTab.style.background = 'transparent'; keyTab.style.color = '#bbccb0';
-      keyTab.style.borderColor = '#3c4b36';
+      pwTab.style.background = '#2563eb'; pwTab.style.color = '#ffffff';
+      pwTab.style.borderColor = '#2563eb';
+      keyTab.style.background = '#ffffff'; keyTab.style.color = '#64748b';
+      keyTab.style.borderColor = '#e2e8f0';
       pwSection.style.display = ''; keySection.style.display = 'none';
     } else {
-      keyTab.style.background = '#4af626'; keyTab.style.color = '#0a0a0a';
-      keyTab.style.borderColor = '#4af626';
-      pwTab.style.background = 'transparent'; pwTab.style.color = '#bbccb0';
-      pwTab.style.borderColor = '#3c4b36';
+      keyTab.style.background = '#2563eb'; keyTab.style.color = '#ffffff';
+      keyTab.style.borderColor = '#2563eb';
+      pwTab.style.background = '#ffffff'; pwTab.style.color = '#64748b';
+      pwTab.style.borderColor = '#e2e8f0';
       keySection.style.display = ''; pwSection.style.display = 'none';
     }
   }
@@ -301,7 +299,7 @@ export class ConnectionForm {
       termSection.classList.add('hidden');
       termSection.classList.remove('flex');
       authSection.classList.remove('hidden');
-      document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 bg-[#353534] inline-block"></span> STATUS: OFFLINE';
+      document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-300 inline-block"></span> Status: Offline';
     }
   }
 }

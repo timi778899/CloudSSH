@@ -15,12 +15,12 @@ export interface SSHConnectionConfig {
 }
 
 export const THEMES = {
-  cyberpunk: {
-    background: '#0a0a0a',
-    foreground: '#4af626',
-    cursor: '#14d1ff',
-    cursorAccent: '#0a0a0a',
-    selectionBackground: '#273747',
+  business: {
+    background: '#ffffff',
+    foreground: '#172033',
+    cursor: '#2563eb',
+    cursorAccent: '#ffffff',
+    selectionBackground: '#dbeafe',
   },
   glacier: {
     background: '#0a192f',
@@ -59,7 +59,7 @@ export class SSHTerminal {
       cursorStyle: 'block',
       fontSize: 14,
       fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", monospace',
-      theme: THEMES.cyberpunk,
+      theme: THEMES.business,
       allowProposedApi: true,
       scrollback: 10000,
     });
@@ -142,7 +142,7 @@ export class SSHTerminal {
 
       this.ws.onclose = () => {
         this.terminal.writeln('\x1b[31m[-] 连接已关闭\x1b[0m');
-        document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 bg-[#353534] inline-block"></span> STATUS: OFFLINE';
+        document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-300 inline-block"></span> Status: Offline';
       };
 
       // Zmodem support
@@ -163,7 +163,7 @@ export class SSHTerminal {
               case 'status':
                 this.terminal.writeln(`\x1b[32m[*] ${msg.message}\x1b[0m`);
                 if (msg.message === '认证成功') {
-                  document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 bg-[#4af626] inline-block animate-pulse"></span> STATUS: ONLINE';
+                  document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span> Status: Online';
                 }
                 break;
               case 'error':
@@ -187,8 +187,8 @@ export class SSHTerminal {
         this.terminal.writeln(
           `\x1b[33m[*] Connection closed (code=${event.code})\x1b[0m`
         );
-        document.getElementById('term-status')!.innerHTML = '<div class="w-2 h-2 bg-red-500"></div> Disconnected';
-        document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 bg-[#353534] inline-block"></span> STATUS: OFFLINE';
+        document.getElementById('term-status')!.innerHTML = '<div class="w-2 h-2 rounded-full bg-red-500"></div> Disconnected';
+        document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-300 inline-block"></span> Status: Offline';
         
         if (event.code !== 1000 && this.lastConfig && this.reconnectAttempts < this.maxReconnectAttempts) {
           this.scheduleReconnect();

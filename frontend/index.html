@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html class="dark" lang="zh-CN">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <title>CloudSSH</title>
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
   <script>
   tailwind.config = {
@@ -14,26 +14,26 @@
     theme: {
       extend: {
         colors: {
-          "background": "#131313",
-          "on-surface": "#e5e2e1",
-          "on-surface-variant": "#bbccb0",
-          "outline": "#86957d",
-          "outline-variant": "#3c4b36",
-          "primary-container": "#4af626",
-          "on-primary-fixed": "#022100",
-          "surface": "#131313",
-          "surface-variant": "#353534",
-          "secondary-container": "#14d1ff",
-          "secondary-fixed": "#b7eaff",
-          "error": "#ffb4ab",
-          "error-container": "#93000a",
-          "surface-container-lowest": "#0e0e0e"
+          "background": "#f5f9ff",
+          "on-surface": "#172033",
+          "on-surface-variant": "#64748b",
+          "outline": "#b9cbe3",
+          "outline-variant": "#dbeafe",
+          "primary-container": "#2563eb",
+          "on-primary-fixed": "#ffffff",
+          "surface": "#ffffff",
+          "surface-variant": "#eef6ff",
+          "secondary-container": "#38bdf8",
+          "secondary-fixed": "#dff3ff",
+          "error": "#dc2626",
+          "error-container": "#fee2e2",
+          "surface-container-lowest": "#eef6ff"
         },
         fontFamily: {
-          "body": ["JetBrains Mono"],
-          "headline": ["JetBrains Mono"],
-          "label": ["JetBrains Mono"],
-          "code": ["JetBrains Mono"]
+          "body": ["Inter", "Microsoft YaHei", "PingFang SC", "Arial", "sans-serif"],
+          "headline": ["Inter", "Microsoft YaHei", "PingFang SC", "Arial", "sans-serif"],
+          "label": ["Inter", "Microsoft YaHei", "PingFang SC", "Arial", "sans-serif"],
+          "code": ["JetBrains Mono", "Cascadia Code", "Consolas", "monospace"]
         }
       }
     }
@@ -42,58 +42,56 @@
   <link rel="stylesheet" href="/src/style.css" />
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
-<body class="min-h-screen font-body text-sm overflow-hidden">
+<body class="min-h-screen font-body text-sm overflow-hidden bg-background text-on-surface">
   <div id="app">
-    <!-- Login Page -->
-    <div id="auth-section" class="min-h-screen flex items-center justify-center p-6 relative">
-      <div class="scanlines"></div>
-      <div class="flicker"></div>
-      <main class="w-full max-w-md relative z-10">
-        <div class="mb-8 text-center">
-          <div class="text-3xl font-bold text-[#4af626] tracking-tighter mb-2">CloudSSH<span class="blinking-cursor"></span></div>
+    <div id="auth-section" class="min-h-screen flex items-center justify-center p-6 relative bg-gradient-to-br from-white via-[#f5f9ff] to-[#e8f4ff]">
+      <main class="w-full max-w-[460px] relative z-10">
+        <div class="mb-7 text-center">
+          <div class="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-primary-container text-white shadow-lg shadow-blue-500/20 mb-4">
+            <span class="material-symbols-outlined" style="font-size: 26px;">cloud</span>
+          </div>
+          <div class="text-3xl font-bold text-[#172033] tracking-normal mb-2">CloudSSH<span class="blinking-cursor"></span></div>
+          <div class="text-sm text-slate-500">Secure browser-based SSH connection console</div>
         </div>
-        <div class="cyber-box p-6 shadow-2xl relative">
-          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#4af626] to-transparent opacity-50"></div>
-          <div class="flex items-center justify-between mb-8 pb-4 border-b border-[#3c4b36]">
-            <span class="text-xs font-bold tracking-[0.1em] text-[#14d1ff]">CONNECTION_PARAMETERS</span>
-            <span class="material-symbols-outlined text-[#14d1ff]" style="font-variation-settings: 'FILL' 0;">terminal</span>
+        <div class="business-panel p-6 relative">
+          <div class="flex items-center justify-between mb-7 pb-4 border-b border-outline-variant">
+            <span class="text-xs font-semibold text-slate-500 uppercase">Connection Settings</span>
+            <span class="material-symbols-outlined text-primary-container" style="font-variation-settings: 'FILL' 0;">terminal</span>
           </div>
           <div id="connection-form-container"></div>
         </div>
-        <div class="mt-8 text-center text-[13px] text-[#bbccb0] opacity-60">SYSTEM READY. WAITING FOR INPUT.</div>
-        <div class="mt-4 text-center">
-          <a href="https://github.com/newbietan/CloudSSH" class="text-[13px] text-[#4af626] opacity-60 hover:opacity-100 transition-colors tracking-widest uppercase">[ GitHub Open Source ]</a>
+        <div class="mt-6 text-center text-xs text-slate-500">Ready for a new secure session.</div>
+        <div class="mt-3 text-center">
+          <a href="https://github.com/newbietan/CloudSSH" class="text-xs text-primary-container hover:text-blue-700 transition-colors">GitHub Open Source</a>
         </div>
       </main>
     </div>
 
-    <!-- Terminal Page -->
     <div id="terminal-section" class="hidden h-screen flex-col bg-background text-on-surface">
-      <!-- TopAppBar -->
-      <header class="flex justify-between items-center w-full px-6 h-16 bg-background border-b border-outline-variant z-50">
-        <div class="flex items-center gap-6">
-          <h1 class="text-2xl font-bold text-primary-container tracking-tighter cursor-pointer">CloudSSH</h1>
+      <header class="flex justify-between items-center w-full px-6 h-16 bg-surface border-b border-outline-variant z-50 shadow-sm">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-primary-container text-white flex items-center justify-center">
+            <span class="material-symbols-outlined" style="font-size: 20px;">cloud</span>
+          </div>
+          <h1 class="text-xl font-bold text-slate-900 tracking-normal cursor-pointer">CloudSSH</h1>
         </div>
-        <div class="flex items-center gap-4 text-primary-container">
-          <select id="theme-selector" class="bg-surface-variant text-on-surface-variant text-xs py-1 px-2 border-none outline-none cursor-pointer rounded">
-            <option value="cyberpunk">Cyberpunk</option>
-            <option value="glacier">Glacier</option>
-            <option value="gruvbox">Gruvbox</option>
+        <div class="flex items-center gap-3 text-slate-600">
+          <select id="theme-selector" class="bg-white text-slate-600 text-xs py-2 px-3 border border-outline-variant outline-none cursor-pointer rounded-md focus:ring-2 focus:ring-blue-100 focus:border-primary-container">
+            <option value="business">Business</option>
+            <option value="glacier">Midnight</option>
+            <option value="gruvbox">Classic</option>
           </select>
-          <button id="disconnect-btn" class="hover:opacity-80 transition-opacity cursor-pointer p-1 flex items-center justify-center" title="Disconnect">
+          <button id="disconnect-btn" class="hover:bg-blue-50 hover:text-primary-container transition-colors cursor-pointer p-2 rounded-md flex items-center justify-center" title="Disconnect">
             <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">power_settings_new</span>
           </button>
         </div>
       </header>
 
-      <!-- Main Terminal -->
       <main class="flex-1 p-6 pb-14 relative bg-surface-container-lowest overflow-hidden">
-        <div class="absolute inset-0 scanline pointer-events-none z-10 opacity-30"></div>
-        <div id="terminal-wrapper" class="h-full w-full border border-outline-variant bg-[#0a0a0a] p-4 overflow-hidden font-code text-[13px] text-primary-container relative z-0 flex flex-col">
-          <!-- Status Bar -->
-          <div class="flex justify-between items-center border-b border-surface-variant pb-2 mb-4 text-on-surface-variant opacity-80 text-[11px]">
-            <div class="flex gap-6">
-              <span id="term-status" class="flex items-center gap-1"><div class="w-2 h-2 bg-primary-container"></div> Connected</span>
+        <div id="terminal-wrapper" class="h-full w-full border border-outline-variant bg-white rounded-lg p-4 overflow-hidden font-code text-[13px] text-slate-800 relative z-0 flex flex-col shadow-sm">
+          <div class="flex justify-between items-center border-b border-outline-variant pb-2 mb-4 text-slate-500 text-[11px]">
+            <div class="flex gap-6 flex-wrap">
+              <span id="term-status" class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-emerald-500"></div> Connected</span>
               <span id="term-host">Host: -</span>
               <span id="term-user">User: -</span>
               <span id="term-port">Port: -</span>
@@ -102,16 +100,14 @@
               <span id="term-info"></span>
             </div>
           </div>
-          <!-- Terminal Output -->
           <div id="terminal-container" class="flex-1 overflow-hidden"></div>
         </div>
       </main>
 
-      <!-- Footer -->
-      <footer class="fixed bottom-0 left-0 w-full px-6 py-2 flex justify-between items-center z-50 bg-background/80 backdrop-blur-md border-t border-outline-variant text-xs h-12">
-        <div class="text-secondary-container opacity-60">© <span id="copyright-year"></span> CLOUD_SSH_TERMINAL - https://github.com/newbietan/CloudSSH</div>
+      <footer class="fixed bottom-0 left-0 w-full px-6 py-2 flex justify-between items-center z-50 bg-white/85 backdrop-blur-md border-t border-outline-variant text-xs h-12">
+        <div class="text-slate-500">© <span id="copyright-year"></span> CloudSSH - https://github.com/newbietan/CloudSSH</div>
         <div class="flex gap-4">
-          <a class="text-on-surface-variant opacity-60 hover:opacity-100 transition-opacity" href="https://github.com/newbietan/CloudSSH">Documentation</a>
+          <a class="text-slate-500 hover:text-primary-container transition-colors" href="https://github.com/newbietan/CloudSSH">Documentation</a>
         </div>
       </footer>
     </div>
