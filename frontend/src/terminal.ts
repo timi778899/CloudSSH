@@ -51,6 +51,7 @@ export class SSHTerminal {
   private maxReconnectAttempts: number = 5;
   private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
   private lastConfig: SSHConnectionConfig | null = null;
+  private allowReconnect: boolean = false;
 
   constructor(containerId: string) {
     this.container = document.getElementById(containerId)!;
@@ -107,6 +108,7 @@ export class SSHTerminal {
 
   async connect(config: SSHConnectionConfig): Promise<void> {
     this.lastConfig = config;
+    this.allowReconnect = false;
     const wsUrl = new URL(window.location.href);
     wsUrl.protocol = wsUrl.protocol === 'https:' ? 'wss:' : 'ws:';
     wsUrl.pathname = '/api/ssh';
@@ -125,7 +127,6 @@ export class SSHTerminal {
           privateKey: config.privateKey,
         }));
         
-        this.reconnectAttempts = 0;
         this.startHeartbeat();
         resolve();
       };
@@ -152,11 +153,15 @@ export class SSHTerminal {
               case 'status':
                 this.terminal.writeln(`\x1b[32m[*] ${msg.message}\x1b[0m`);
                 if (msg.message === '\u8ba4\u8bc1\u6210\u529f') {
+                  this.allowReconnect = true;
+                  this.reconnectAttempts = 0;
                   document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span> \u72b6\u6001\uff1a\u5728\u7ebf';
                   document.getElementById('term-status')!.innerHTML = '<div class="w-2 h-2 rounded-full bg-emerald-500"></div> \u5df2\u8fde\u63a5';
                 }
                 break;
               case 'error':
+                this.allowReconnect = false;
+                this.lastConfig = null;
                 this.terminal.writeln(`\x1b[31m[!] ${msg.message}\x1b[0m`);
                 break;
             }
@@ -180,7 +185,7 @@ export class SSHTerminal {
         document.getElementById('term-status')!.innerHTML = '<div class="w-2 h-2 rounded-full bg-red-500"></div> \u5df2\u65ad\u5f00';
         document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-300 inline-block"></span> \u72b6\u6001\uff1a\u79bb\u7ebf';
         
-        if (event.code !== 1000 && this.lastConfig && this.reconnectAttempts < this.maxReconnectAttempts) {
+        if (event.code !== 1000 && this.allowReconnect && this.lastConfig && this.reconnectAttempts < this.maxReconnectAttempts) {
           this.scheduleReconnect();
         }
       };
@@ -332,6 +337,7 @@ export class SSHTerminal {
       this.reconnectTimeout = null;
     }
     this.reconnectAttempts = this.maxReconnectAttempts;
+    this.allowReconnect = false;
     this.ws?.close(1000);
     this.ws = null;
     this.disposables.forEach(d => d.dispose());
