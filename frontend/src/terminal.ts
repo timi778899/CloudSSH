@@ -79,7 +79,7 @@ export class SSHTerminal {
           this.ws.send(text);
         }
       } catch (err) {
-        console.error('Failed to read clipboard', err);
+        console.error('读取剪贴板失败', err);
       }
     });
   }
@@ -95,19 +95,17 @@ export class SSHTerminal {
     try {
       this.webglAddon = new WebglAddon();
       this.webglAddon.onContextLoss(e => {
-        console.warn('WebGL context lost', e);
+        console.warn('WebGL 上下文丢失', e);
         this.webglAddon.dispose();
       });
       this.terminal.loadAddon(this.webglAddon);
     } catch (e) {
-      console.warn('WebGL addon failed to load, falling back to canvas/dom', e);
+      console.warn('WebGL 插件加载失败，已回退到 Canvas/DOM 渲染', e);
     }
 
     this.fit();
 
-    this.terminal.writeln('\x1b[1;33m╔══════════════════════════════════╗\x1b[0m');
-    this.terminal.writeln('\x1b[1;33m║      Connecting to CloudSSH      ║\x1b[0m');
-    this.terminal.writeln('\x1b[1;33m╚══════════════════════════════════╝\x1b[0m');
+    this.terminal.writeln('\x1b[34mCloudSSH 正在建立安全终端会话...\x1b[0m');
     this.terminal.writeln('');
   }
 
@@ -121,7 +119,7 @@ export class SSHTerminal {
       this.ws = new WebSocket(wsUrl.toString());
 
       this.ws.onopen = () => {
-        this.terminal.writeln('\x1b[32m[+] WebSocket connected, sending credentials...\x1b[0m');
+        this.terminal.writeln('\x1b[32m[+] WebSocket 已连接，正在发送认证信息...\x1b[0m');
         this.ws?.send(JSON.stringify({
           host: config.host,
           port: config.port,
@@ -137,12 +135,12 @@ export class SSHTerminal {
       };
 
       this.ws.onerror = () => {
-        reject(new Error('WebSocket connection failed'));
+        reject(new Error('WebSocket 连接失败'));
       };
 
       this.ws.onclose = () => {
         this.terminal.writeln('\x1b[31m[-] 连接已关闭\x1b[0m');
-        document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-300 inline-block"></span> Status: Offline';
+        document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-300 inline-block"></span> 状态：离线';
       };
 
       // Zmodem support
@@ -163,7 +161,8 @@ export class SSHTerminal {
               case 'status':
                 this.terminal.writeln(`\x1b[32m[*] ${msg.message}\x1b[0m`);
                 if (msg.message === '认证成功') {
-                  document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span> Status: Online';
+                  document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span> 状态：在线';
+                  document.getElementById('term-status')!.innerHTML = '<div class="w-2 h-2 rounded-full bg-emerald-500"></div> 已连接';
                 }
                 break;
               case 'error':
@@ -185,10 +184,10 @@ export class SSHTerminal {
       this.ws.onclose = (event) => {
         this.stopHeartbeat();
         this.terminal.writeln(
-          `\x1b[33m[*] Connection closed (code=${event.code})\x1b[0m`
+          `\x1b[33m[*] 连接已关闭（代码：${event.code}）\x1b[0m`
         );
-        document.getElementById('term-status')!.innerHTML = '<div class="w-2 h-2 rounded-full bg-red-500"></div> Disconnected';
-        document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-300 inline-block"></span> Status: Offline';
+        document.getElementById('term-status')!.innerHTML = '<div class="w-2 h-2 rounded-full bg-red-500"></div> 已断开';
+        document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-300 inline-block"></span> 状态：离线';
         
         if (event.code !== 1000 && this.lastConfig && this.reconnectAttempts < this.maxReconnectAttempts) {
           this.scheduleReconnect();
@@ -196,8 +195,8 @@ export class SSHTerminal {
       };
 
       this.ws.onerror = () => {
-        this.terminal.writeln('\x1b[31m[!] Connection error\x1b[0m');
-        reject(new Error('WebSocket connection failed'));
+        this.terminal.writeln('\x1b[31m[!] 连接出错\x1b[0m');
+        reject(new Error('WebSocket 连接失败'));
       };
 
       this.disposables.push(
@@ -250,15 +249,15 @@ export class SSHTerminal {
     this.reconnectAttempts++;
     const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
     
-    this.terminal.writeln(`\x1b[33m[*] Reconnecting in ${delay / 1000}s (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...\x1b[0m`);
+    this.terminal.writeln(`\x1b[33m[*] ${delay / 1000} 秒后重连（第 ${this.reconnectAttempts}/${this.maxReconnectAttempts} 次）...\x1b[0m`);
     
     this.reconnectTimeout = setTimeout(async () => {
       if (this.lastConfig) {
-        this.terminal.writeln('\x1b[32m[+] Reconnecting...\x1b[0m');
+        this.terminal.writeln('\x1b[32m[+] 正在重连...\x1b[0m');
         try {
           await this.connect(this.lastConfig);
         } catch (e) {
-          this.terminal.writeln('\x1b[31m[!] Reconnect failed\x1b[0m');
+          this.terminal.writeln('\x1b[31m[!] 重连失败\x1b[0m');
         }
       }
     }, delay);

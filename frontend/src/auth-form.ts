@@ -114,39 +114,35 @@ export class ConnectionForm {
       <form class="space-y-5" id="connection-form">
         <div class="grid grid-cols-4 gap-4">
           <div class="col-span-3">
-            <label class="block text-xs font-bold tracking-normal text-slate-500 mb-2">Host address</label>
-            <div class="flex items-center">
-               <input id="host" class="terminal-input text-[13px]" placeholder="192.168.1.1 or 2001:db8::1" type="text" required>
-            </div>
+            <label class="block text-xs font-semibold tracking-normal text-slate-500 mb-2">主机地址</label>
+            <input id="host" class="terminal-input text-[13px]" placeholder="192.168.1.1 或 2001:db8::1" type="text" required>
           </div>
           <div class="col-span-1">
-            <label class="block text-xs font-bold tracking-normal text-slate-500 mb-2">Port</label>
-            <div class="flex items-center">
-              <input id="port" class="terminal-input text-[13px]" placeholder="22" type="text" value="22">
-            </div>
+            <label class="block text-xs font-semibold tracking-normal text-slate-500 mb-2">端口</label>
+            <input id="port" class="terminal-input text-[13px]" placeholder="22" type="text" value="22">
           </div>
         </div>
         <div>
-          <label class="block text-xs font-bold tracking-normal text-slate-500 mb-2">User name</label>
+          <label class="block text-xs font-semibold tracking-normal text-slate-500 mb-2">用户名</label>
           <div class="flex items-center">
             <span class="material-symbols-outlined text-slate-500 mr-2" style="font-size: 16px;">person</span>
-            <input id="username" class="terminal-input text-[13px]" placeholder="admin" type="text" required>
+            <input id="username" class="terminal-input text-[13px]" placeholder="root / admin" type="text" required>
           </div>
         </div>
         <div>
-          <label class="block text-xs font-bold tracking-normal text-slate-500 mb-2">Authentication</label>
+          <label class="block text-xs font-semibold tracking-normal text-slate-500 mb-2">认证方式</label>
           <div class="flex gap-2 mb-3">
-            <button type="button" id="auth-tab-password" class="auth-tab px-3 py-2 text-[12px] font-semibold tracking-normal border border-blue-600 text-white bg-blue-600 rounded-md cursor-pointer transition-all">Password</button>
-            <button type="button" id="auth-tab-key" class="auth-tab px-3 py-2 text-[12px] font-semibold tracking-normal border border-slate-200 text-slate-500 bg-white rounded-md cursor-pointer transition-all">Private key</button>
+            <button type="button" id="auth-tab-password" class="auth-tab px-3 py-2 text-[12px] font-semibold tracking-normal border border-blue-600 text-white bg-blue-600 rounded-md cursor-pointer transition-all">密码登录</button>
+            <button type="button" id="auth-tab-key" class="auth-tab px-3 py-2 text-[12px] font-semibold tracking-normal border border-slate-200 text-slate-500 bg-white rounded-md cursor-pointer transition-all">私钥登录</button>
           </div>
           <div id="auth-password-section">
             <div class="flex items-center">
               <span class="material-symbols-outlined text-slate-500 mr-2" style="font-size: 16px;">key</span>
-              <input id="password" class="terminal-input text-[13px]" placeholder="••••••••" type="password">
+              <input id="password" class="terminal-input text-[13px]" placeholder="请输入登录密码" type="password">
             </div>
           </div>
           <div id="auth-key-section" style="display:none;">
-            <textarea id="private-key" class="terminal-input text-[11px] w-full" rows="5" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----&#10;...粘贴 Ed25519 私钥内容...&#10;-----END OPENSSH PRIVATE KEY-----" style="resize:vertical;padding:10px 12px;"></textarea>
+            <textarea id="private-key" class="terminal-input text-[11px] w-full" rows="5" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----&#10;请粘贴 Ed25519 或 RSA 私钥内容&#10;-----END OPENSSH PRIVATE KEY-----" style="resize:vertical;padding:10px 12px;"></textarea>
           </div>
         </div>
         <div id="turnstile-container" style="display:none;">
@@ -154,17 +150,17 @@ export class ConnectionForm {
         </div>
         <div class="flex items-center gap-2 mt-2">
           <input type="checkbox" id="remember-me" class="accent-blue-600 w-4 h-4 cursor-pointer">
-          <label for="remember-me" class="text-xs text-slate-500 cursor-pointer select-none">Remember connection</label>
+          <label for="remember-me" class="text-xs text-slate-500 cursor-pointer select-none">记住本次连接信息</label>
         </div>
         <div class="pt-4">
-          <button id="connect-btn" class="business-button w-full py-3 px-4 text-xs font-bold tracking-normal uppercase flex items-center justify-center gap-2 bg-blue-600 text-white" type="button">
+          <button id="connect-btn" class="business-button w-full py-3 px-4 text-sm font-semibold tracking-normal flex items-center justify-center gap-2 bg-blue-600 text-white" type="button">
             <span class="material-symbols-outlined" style="font-size: 18px;">power_settings_new</span>
-            Connect
+            连接服务器
           </button>
         </div>
         <div class="flex justify-between items-center mt-4">
           <span id="status-text" class="text-[13px] text-slate-500 flex items-center gap-1">
-            <span class="w-2 h-2 rounded-full bg-slate-300 inline-block"></span> Status: Offline
+            <span class="w-2 h-2 rounded-full bg-slate-300 inline-block"></span> 状态：离线
           </span>
         </div>
       </form>
@@ -245,12 +241,12 @@ export class ConnectionForm {
     const remember = (document.getElementById('remember-me') as HTMLInputElement).checked;
 
     if (!host || !username) {
-      alert('请填写主机名和用户名');
+      alert('请填写主机地址和用户名');
       return;
     }
 
     if (this.authMode === 'password' && !password) {
-      alert('请输入密码');
+      alert('请输入登录密码');
       return;
     }
 
@@ -280,9 +276,9 @@ export class ConnectionForm {
     termSection.classList.remove('hidden');
     termSection.classList.add('flex');
 
-    document.getElementById('term-host')!.textContent = 'Host: ' + host;
-    document.getElementById('term-user')!.textContent = 'User: ' + username;
-    document.getElementById('term-port')!.textContent = 'Port: ' + port;
+    document.getElementById('term-host')!.textContent = '主机：' + host;
+    document.getElementById('term-user')!.textContent = '用户：' + username;
+    document.getElementById('term-port')!.textContent = '端口：' + port;
 
     this.terminal.mount();
 
@@ -299,8 +295,7 @@ export class ConnectionForm {
       termSection.classList.add('hidden');
       termSection.classList.remove('flex');
       authSection.classList.remove('hidden');
-      document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-300 inline-block"></span> Status: Offline';
+      document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-300 inline-block"></span> 状态：离线';
     }
   }
 }
-

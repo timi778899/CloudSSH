@@ -10,7 +10,7 @@ document.getElementById('disconnect-btn')?.addEventListener('click', () => {
   termSection.classList.add('hidden');
   termSection.classList.remove('flex');
   document.getElementById('auth-section')!.classList.remove('hidden');
-  document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-300 inline-block"></span> Status: Offline';
+  document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-300 inline-block"></span> 状态：离线';
 });
 
 document.getElementById('theme-selector')?.addEventListener('change', (e) => {
