@@ -44,6 +44,7 @@ export class SSHTerminal {
   private webglAddon!: WebglAddon;
   private ws: WebSocket | null = null;
   private container: HTMLElement;
+  private contextMenu: HTMLDivElement;
   private disposables: { dispose(): void }[] = [];
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
   private reconnectAttempts: number = 0;
@@ -53,6 +54,7 @@ export class SSHTerminal {
 
   constructor(containerId: string) {
     this.container = document.getElementById(containerId)!;
+    this.contextMenu = this.createContextMenu();
 
     this.terminal = new Terminal({
       cursorBlink: true,
@@ -69,18 +71,12 @@ export class SSHTerminal {
     this.terminal.loadAddon(new WebLinksAddon());
 
     window.addEventListener('resize', () => this.fit());
+    document.addEventListener('click', () => this.hideContextMenu());
+    window.addEventListener('blur', () => this.hideContextMenu());
 
-    // Right-click paste support
-    this.container.addEventListener('contextmenu', async (e) => {
+    this.container.addEventListener('contextmenu', (e) => {
       e.preventDefault();
-      try {
-        const text = await navigator.clipboard.readText();
-        if (text && this.ws?.readyState === WebSocket.OPEN) {
-          this.ws.send(text);
-        }
-      } catch (err) {
-        console.error('读取剪贴板失败', err);
-      }
+      this.showContextMenu(e);
     });
   }
 
@@ -95,17 +91,17 @@ export class SSHTerminal {
     try {
       this.webglAddon = new WebglAddon();
       this.webglAddon.onContextLoss(e => {
-        console.warn('WebGL 上下文丢失', e);
+        console.warn('WebGL context lost', e);
         this.webglAddon.dispose();
       });
       this.terminal.loadAddon(this.webglAddon);
     } catch (e) {
-      console.warn('WebGL 插件加载失败，已回退到 Canvas/DOM 渲染', e);
+      console.warn('WebGL addon failed to load, falling back to canvas/dom', e);
     }
 
     this.fit();
 
-    this.terminal.writeln('\x1b[34mKvmidc-SSH终端正在建立安全终端会话...\x1b[0m');
+    this.terminal.writeln('\x1b[34mKvmidc-SSH\u7ec8\u7aef\u6b63\u5728\u5efa\u7acb\u5b89\u5168\u7ec8\u7aef\u4f1a\u8bdd...\x1b[0m');
     this.terminal.writeln('');
   }
 
@@ -119,7 +115,7 @@ export class SSHTerminal {
       this.ws = new WebSocket(wsUrl.toString());
 
       this.ws.onopen = () => {
-        this.terminal.writeln('\x1b[32m[+] WebSocket 已连接，正在发送认证信息...\x1b[0m');
+        this.terminal.writeln('\x1b[32m[+] WebSocket \u5df2\u8fde\u63a5\uff0c\u6b63\u5728\u53d1\u9001\u8ba4\u8bc1\u4fe1\u606f...\x1b[0m');
         this.ws?.send(JSON.stringify({
           host: config.host,
           port: config.port,
@@ -135,12 +131,7 @@ export class SSHTerminal {
       };
 
       this.ws.onerror = () => {
-        reject(new Error('WebSocket 连接失败'));
-      };
-
-      this.ws.onclose = () => {
-        this.terminal.writeln('\x1b[31m[-] 连接已关闭\x1b[0m');
-        document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-300 inline-block"></span> 状态：离线';
+        reject(new Error('WebSocket connection failed'));
       };
 
       // Zmodem support
@@ -160,9 +151,9 @@ export class SSHTerminal {
             switch (msg.type) {
               case 'status':
                 this.terminal.writeln(`\x1b[32m[*] ${msg.message}\x1b[0m`);
-                if (msg.message === '认证成功') {
-                  document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span> 状态：在线';
-                  document.getElementById('term-status')!.innerHTML = '<div class="w-2 h-2 rounded-full bg-emerald-500"></div> 已连接';
+                if (msg.message === '\u8ba4\u8bc1\u6210\u529f') {
+                  document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span> \u72b6\u6001\uff1a\u5728\u7ebf';
+                  document.getElementById('term-status')!.innerHTML = '<div class="w-2 h-2 rounded-full bg-emerald-500"></div> \u5df2\u8fde\u63a5';
                 }
                 break;
               case 'error':
@@ -184,10 +175,10 @@ export class SSHTerminal {
       this.ws.onclose = (event) => {
         this.stopHeartbeat();
         this.terminal.writeln(
-          `\x1b[33m[*] 连接已关闭（代码：${event.code}）\x1b[0m`
+          `\x1b[33m[*] \u8fde\u63a5\u5df2\u5173\u95ed\uff08\u4ee3\u7801\uff1a${event.code}\uff09\x1b[0m`
         );
-        document.getElementById('term-status')!.innerHTML = '<div class="w-2 h-2 rounded-full bg-red-500"></div> 已断开';
-        document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-300 inline-block"></span> 状态：离线';
+        document.getElementById('term-status')!.innerHTML = '<div class="w-2 h-2 rounded-full bg-red-500"></div> \u5df2\u65ad\u5f00';
+        document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-300 inline-block"></span> \u72b6\u6001\uff1a\u79bb\u7ebf';
         
         if (event.code !== 1000 && this.lastConfig && this.reconnectAttempts < this.maxReconnectAttempts) {
           this.scheduleReconnect();
@@ -195,8 +186,8 @@ export class SSHTerminal {
       };
 
       this.ws.onerror = () => {
-        this.terminal.writeln('\x1b[31m[!] 连接出错\x1b[0m');
-        reject(new Error('WebSocket 连接失败'));
+        this.terminal.writeln('\x1b[31m[!] \u8fde\u63a5\u51fa\u9519\x1b[0m');
+        reject(new Error('WebSocket connection failed'));
       };
 
       this.disposables.push(
@@ -225,6 +216,76 @@ export class SSHTerminal {
     this.fitAddon.fit();
   }
 
+  private createContextMenu(): HTMLDivElement {
+    const menu = document.createElement('div');
+    menu.className = 'terminal-context-menu';
+    menu.innerHTML = `
+      <button type="button" data-action="copy">\u590d\u5236</button>
+      <button type="button" data-action="paste">\u7c98\u8d34</button>
+    `;
+
+    menu.addEventListener('click', async (event) => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button');
+      if (!button || button.disabled) return;
+
+      this.hideContextMenu();
+      if (button.dataset.action === 'copy') {
+        await this.copySelection();
+      }
+      if (button.dataset.action === 'paste') {
+        await this.pasteFromClipboard();
+      }
+    });
+
+    document.body.appendChild(menu);
+    return menu;
+  }
+
+  private showContextMenu(event: MouseEvent): void {
+    const copyButton = this.contextMenu.querySelector<HTMLButtonElement>('[data-action="copy"]');
+    if (copyButton) {
+      copyButton.disabled = !this.terminal.hasSelection();
+    }
+
+    this.contextMenu.style.left = '0px';
+    this.contextMenu.style.top = '0px';
+    this.contextMenu.classList.add('is-open');
+
+    const menuRect = this.contextMenu.getBoundingClientRect();
+    const left = Math.min(event.clientX, window.innerWidth - menuRect.width - 8);
+    const top = Math.min(event.clientY, window.innerHeight - menuRect.height - 8);
+
+    this.contextMenu.style.left = `${Math.max(8, left)}px`;
+    this.contextMenu.style.top = `${Math.max(8, top)}px`;
+  }
+
+  private hideContextMenu(): void {
+    this.contextMenu.classList.remove('is-open');
+  }
+
+  private async copySelection(): Promise<void> {
+    const text = this.terminal.getSelection();
+    if (!text) return;
+
+    try {
+      await navigator.clipboard.writeText(text);
+      this.terminal.clearSelection();
+    } catch (err) {
+      console.error('Failed to copy terminal selection', err);
+    }
+  }
+
+  private async pasteFromClipboard(): Promise<void> {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text && this.ws?.readyState === WebSocket.OPEN) {
+        this.ws.send(text);
+      }
+    } catch (err) {
+      console.error('Failed to read clipboard', err);
+    }
+  }
+
   private startHeartbeat(): void {
     this.stopHeartbeat();
     this.heartbeatInterval = setInterval(() => {
@@ -249,21 +310,22 @@ export class SSHTerminal {
     this.reconnectAttempts++;
     const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
     
-    this.terminal.writeln(`\x1b[33m[*] ${delay / 1000} 秒后重连（第 ${this.reconnectAttempts}/${this.maxReconnectAttempts} 次）...\x1b[0m`);
+    this.terminal.writeln(`\x1b[33m[*] ${delay / 1000} \u79d2\u540e\u91cd\u8fde\uff08\u7b2c ${this.reconnectAttempts}/${this.maxReconnectAttempts} \u6b21\uff09...\x1b[0m`);
     
     this.reconnectTimeout = setTimeout(async () => {
       if (this.lastConfig) {
-        this.terminal.writeln('\x1b[32m[+] 正在重连...\x1b[0m');
+        this.terminal.writeln('\x1b[32m[+] \u6b63\u5728\u91cd\u8fde...\x1b[0m');
         try {
           await this.connect(this.lastConfig);
         } catch (e) {
-          this.terminal.writeln('\x1b[31m[!] 重连失败\x1b[0m');
+          this.terminal.writeln('\x1b[31m[!] \u91cd\u8fde\u5931\u8d25\x1b[0m');
         }
       }
     }, delay);
   }
 
   disconnect(): void {
+    this.hideContextMenu();
     this.stopHeartbeat();
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
@@ -278,6 +340,7 @@ export class SSHTerminal {
 
   dispose(): void {
     this.disconnect();
+    this.contextMenu.remove();
     this.terminal.dispose();
   }
 }

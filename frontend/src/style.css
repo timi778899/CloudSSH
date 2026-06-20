@@ -255,6 +255,48 @@ body {
   background: rgba(100, 116, 139, 0.9);
 }
 
+.terminal-context-menu {
+  position: fixed;
+  z-index: 9999;
+  display: none;
+  min-width: 128px;
+  padding: 6px;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 46px rgba(15, 23, 42, 0.16);
+  backdrop-filter: blur(16px);
+}
+
+.terminal-context-menu.is-open {
+  display: block;
+}
+
+.terminal-context-menu button {
+  display: block;
+  width: 100%;
+  min-height: 34px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #334155;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+.terminal-context-menu button:hover:not(:disabled) {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.terminal-context-menu button:disabled {
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
 @media (max-width: 860px) {
   .login-layout {
     grid-template-columns: 1fr;
