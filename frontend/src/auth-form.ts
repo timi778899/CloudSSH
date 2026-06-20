@@ -152,6 +152,7 @@ export class ConnectionForm {
           <input type="checkbox" id="remember-me" class="accent-blue-600 w-4 h-4 cursor-pointer">
           <label for="remember-me" class="text-xs text-slate-500 cursor-pointer select-none">记住本次连接信息</label>
         </div>
+        <div id="form-error" class="form-error" role="alert" aria-live="polite"></div>
         <div class="pt-4">
           <button id="connect-btn" class="business-button w-full py-3 px-4 text-sm font-semibold tracking-normal flex items-center justify-center gap-2 bg-blue-600 text-white" type="button">
             <span class="material-symbols-outlined" style="font-size: 18px;">power_settings_new</span>
@@ -203,6 +204,20 @@ export class ConnectionForm {
     }
   }
 
+  private showError(message: string): void {
+    const errorEl = document.getElementById('form-error');
+    if (!errorEl) return;
+    errorEl.textContent = message;
+    errorEl.classList.add('is-visible');
+  }
+
+  private clearError(): void {
+    const errorEl = document.getElementById('form-error');
+    if (!errorEl) return;
+    errorEl.textContent = '';
+    errorEl.classList.remove('is-visible');
+  }
+
   private async loadSavedCredentials(): Promise<void> {
     const stored = localStorage.getItem('cloudssh_cred');
     if (!stored) return;
@@ -226,6 +241,7 @@ export class ConnectionForm {
   }
 
   private async handleConnect(): Promise<void> {
+    this.clearError();
     const hostInput = (document.getElementById('host') as HTMLInputElement).value;
     const host = hostInput.replace(/^\[|\]$/g, '').trim();
     const port = parseInt(
@@ -237,23 +253,23 @@ export class ConnectionForm {
     const remember = (document.getElementById('remember-me') as HTMLInputElement).checked;
 
     if (!host || !username) {
-      alert('请填写主机地址和用户名');
+      this.showError('请填写主机地址和用户名');
       return;
     }
 
     if (this.authMode === 'password' && !password) {
-      alert('请输入登录密码');
+      this.showError('请输入登录密码');
       return;
     }
 
     if (this.authMode === 'key' && !privateKey) {
-      alert('请粘贴私钥内容');
+      this.showError('请粘贴私钥内容');
       return;
     }
 
     // Check Turnstile if enabled
     if (this.turnstileEnabled && !this.turnstileVerified) {
-      alert('请完成人机验证');
+      this.showError('请完成人机验证');
       return;
     }
 

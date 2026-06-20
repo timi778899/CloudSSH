@@ -205,6 +205,18 @@ body {
   box-shadow: 0 8px 18px rgba(37, 99, 235, 0.22);
 }
 
+.form-error {
+  display: none;
+  margin: 2px 0 -6px;
+  color: #dc2626;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.form-error.is-visible {
+  display: block;
+}
+
 .blinking-cursor::after {
   content: '';
   display: inline-block;
