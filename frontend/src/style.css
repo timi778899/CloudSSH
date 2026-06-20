@@ -132,23 +132,34 @@ body {
   font-weight: 500;
 }
 
+.connection-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 132px;
+  gap: 14px;
+}
+
 .terminal-input {
-  min-height: 48px;
+  min-height: 50px;
   background: #ffffff;
   border: 1px solid #d9e2ef;
-  border-radius: 12px;
+  border-radius: 14px;
   color: #172033;
   font-family: inherit;
-  padding: 12px 16px;
+  padding: 13px 16px;
   width: 100%;
   outline: none;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
-  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
+}
+
+.business-input:hover {
+  border-color: #b7c7dd;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.07);
 }
 
 .terminal-input:focus {
   border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18), 0 8px 20px rgba(37, 99, 235, 0.12);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.22), 0 10px 24px rgba(37, 99, 235, 0.15);
   background: #ffffff;
 }
 
@@ -173,6 +184,12 @@ body {
 
 .field-with-icon .terminal-input {
   padding-left: 46px;
+}
+
+@media (max-width: 640px) {
+  .connection-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .auth-segment {

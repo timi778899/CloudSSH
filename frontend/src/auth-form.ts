@@ -112,21 +112,27 @@ export class ConnectionForm {
 
     container.innerHTML = `
       <form class="space-y-5" id="connection-form">
-        <div class="grid grid-cols-4 gap-4">
-          <div class="form-field col-span-3">
+        <div class="connection-grid">
+          <div class="form-field host-field">
             <label>主机地址</label>
-            <input id="host" class="terminal-input text-[13px]" placeholder="192.168.1.1 或 2001:db8::1" type="text" required>
+            <div class="field-with-icon">
+              <span class="material-symbols-outlined">dns</span>
+              <input id="host" class="terminal-input business-input text-[13px]" placeholder="192.168.1.1 或 2001:db8::1" type="text" required>
+            </div>
           </div>
-          <div class="form-field col-span-1">
+          <div class="form-field port-field">
             <label>端口</label>
-            <input id="port" class="terminal-input text-[13px]" placeholder="22" type="text" value="22">
+            <div class="field-with-icon">
+              <span class="material-symbols-outlined">tag</span>
+              <input id="port" class="terminal-input business-input text-[13px]" placeholder="22" type="text" value="22">
+            </div>
           </div>
         </div>
         <div class="form-field">
           <label>用户名</label>
           <div class="field-with-icon">
             <span class="material-symbols-outlined">person</span>
-            <input id="username" class="terminal-input text-[13px]" placeholder="root / admin" type="text" required>
+            <input id="username" class="terminal-input business-input text-[13px]" placeholder="root / admin" type="text" required>
           </div>
         </div>
         <div class="form-field">
@@ -138,7 +144,7 @@ export class ConnectionForm {
           <div id="auth-password-section">
             <div class="field-with-icon">
               <span class="material-symbols-outlined">key</span>
-              <input id="password" class="terminal-input text-[13px]" placeholder="请输入登录密码" type="password">
+              <input id="password" class="terminal-input business-input text-[13px]" placeholder="请输入登录密码" type="password">
             </div>
           </div>
           <div id="auth-key-section" style="display:none;">
