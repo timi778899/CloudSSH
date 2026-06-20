@@ -113,31 +113,31 @@ export class ConnectionForm {
     container.innerHTML = `
       <form class="space-y-5" id="connection-form">
         <div class="grid grid-cols-4 gap-4">
-          <div class="col-span-3">
-            <label class="block text-xs font-semibold tracking-normal text-slate-500 mb-2">主机地址</label>
+          <div class="form-field col-span-3">
+            <label>主机地址</label>
             <input id="host" class="terminal-input text-[13px]" placeholder="192.168.1.1 或 2001:db8::1" type="text" required>
           </div>
-          <div class="col-span-1">
-            <label class="block text-xs font-semibold tracking-normal text-slate-500 mb-2">端口</label>
+          <div class="form-field col-span-1">
+            <label>端口</label>
             <input id="port" class="terminal-input text-[13px]" placeholder="22" type="text" value="22">
           </div>
         </div>
-        <div>
-          <label class="block text-xs font-semibold tracking-normal text-slate-500 mb-2">用户名</label>
-          <div class="flex items-center">
-            <span class="material-symbols-outlined text-slate-500 mr-2" style="font-size: 16px;">person</span>
+        <div class="form-field">
+          <label>用户名</label>
+          <div class="field-with-icon">
+            <span class="material-symbols-outlined">person</span>
             <input id="username" class="terminal-input text-[13px]" placeholder="root / admin" type="text" required>
           </div>
         </div>
-        <div>
-          <label class="block text-xs font-semibold tracking-normal text-slate-500 mb-2">认证方式</label>
-          <div class="flex gap-2 mb-3">
-            <button type="button" id="auth-tab-password" class="auth-tab px-3 py-2 text-[12px] font-semibold tracking-normal border border-blue-600 text-white bg-blue-600 rounded-md cursor-pointer transition-all">密码登录</button>
-            <button type="button" id="auth-tab-key" class="auth-tab px-3 py-2 text-[12px] font-semibold tracking-normal border border-slate-200 text-slate-500 bg-white rounded-md cursor-pointer transition-all">私钥登录</button>
+        <div class="form-field">
+          <label>认证方式</label>
+          <div class="auth-segment">
+            <button type="button" id="auth-tab-password" class="auth-tab is-active">密码登录</button>
+            <button type="button" id="auth-tab-key" class="auth-tab">私钥登录</button>
           </div>
           <div id="auth-password-section">
-            <div class="flex items-center">
-              <span class="material-symbols-outlined text-slate-500 mr-2" style="font-size: 16px;">key</span>
+            <div class="field-with-icon">
+              <span class="material-symbols-outlined">key</span>
               <input id="password" class="terminal-input text-[13px]" placeholder="请输入登录密码" type="password">
             </div>
           </div>
@@ -193,16 +193,12 @@ export class ConnectionForm {
     const keySection = document.getElementById('auth-key-section')!;
 
     if (mode === 'password') {
-      pwTab.style.background = '#2563eb'; pwTab.style.color = '#ffffff';
-      pwTab.style.borderColor = '#2563eb';
-      keyTab.style.background = '#ffffff'; keyTab.style.color = '#64748b';
-      keyTab.style.borderColor = '#e2e8f0';
+      pwTab.classList.add('is-active');
+      keyTab.classList.remove('is-active');
       pwSection.style.display = ''; keySection.style.display = 'none';
     } else {
-      keyTab.style.background = '#2563eb'; keyTab.style.color = '#ffffff';
-      keyTab.style.borderColor = '#2563eb';
-      pwTab.style.background = '#ffffff'; pwTab.style.color = '#64748b';
-      pwTab.style.borderColor = '#e2e8f0';
+      keyTab.classList.add('is-active');
+      pwTab.classList.remove('is-active');
       keySection.style.display = ''; pwSection.style.display = 'none';
     }
   }
