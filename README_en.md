@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>CloudSSH</h1>
+  <h1>Kvmidc-SSH Terminal</h1>
   <p>A Serverless Web SSH Terminal built on Cloudflare Workers: Connect and manage your servers directly from the browser.</p>
   <p><b>Ultra-lightweight · Out-of-the-box · Cyberpunk UI</b></p>
   <p>
@@ -23,7 +23,7 @@
 </div>
 
 > [!TIP]
-> **CloudSSH** utilizes Cloudflare Workers' TCP Sockets support to handle SSH protocol parsing and forwarding at edge nodes, providing a low-latency Web Terminal experience.
+> **Kvmidc-SSH Terminal** utilizes Cloudflare Workers' TCP Sockets support to handle SSH protocol parsing and forwarding at edge nodes, providing a low-latency Web Terminal experience.
 
 ## Demo
 
@@ -115,7 +115,7 @@ flowchart TB
 1. **Clone the Repository**
    ```bash
    git clone https://github.com/newbietan/CloudSSH.git
-   cd CloudSSH
+   cd Kvmidc-SSH-Terminal
    ```
 
 2. **Install Dependencies**

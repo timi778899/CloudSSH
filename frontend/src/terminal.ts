@@ -105,7 +105,7 @@ export class SSHTerminal {
 
     this.fit();
 
-    this.terminal.writeln('\x1b[34mCloudSSH 正在建立安全终端会话...\x1b[0m');
+    this.terminal.writeln('\x1b[34mKvmidc-SSH终端正在建立安全终端会话...\x1b[0m');
     this.terminal.writeln('');
   }
 

@@ -1,7 +1,7 @@
 {
-  "name": "cloudssh",
+  "name": "kvmidc-ssh-terminal",
   "version": "1.0.0",
-  "description": "纯 Cloudflare 架构 Web SSH 工具",
+  "description": "Kvmidc-SSH终端，基于 Cloudflare 架构的 Web SSH 工具",
   "main": "src/worker/index.ts",
   "scripts": {
     "dev": "node scripts/build-html.js && npx wrangler dev",

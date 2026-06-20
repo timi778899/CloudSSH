@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>CloudSSH</h1>
+  <h1>Kvmidc-SSH终端</h1>
   <p>一个基于 Cloudflare Workers 的 Serverless Web SSH 终端：通过浏览器直接连接和管理你的服务器。</p>
   <p><b>极致轻量 · 开箱即用 · 赛博朋克 UI</b></p>
   <p>
@@ -23,7 +23,7 @@
 </div>
 
 > [!TIP]
-> **CloudSSH** 利用 Cloudflare Workers 的 TCP Sockets 支持，在边缘节点实现 SSH 协议的解析与转发，提供低延迟的 Web 终端体验。
+> **Kvmidc-SSH终端** 利用 Cloudflare Workers 的 TCP Sockets 支持，在边缘节点实现 SSH 协议的解析与转发，提供低延迟的 Web 终端体验。
 
 ## 效果演示
 
@@ -115,7 +115,7 @@ flowchart TB
 1. **克隆仓库**
    ```bash
    git clone https://github.com/newbietan/CloudSSH.git
-   cd CloudSSH
+   cd Kvmidc-SSH终端
    ```
 
 2. **安装依赖**
