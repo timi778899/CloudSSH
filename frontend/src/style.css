@@ -9,7 +9,9 @@ body {
   background: #f5f9ff;
   color: #172033;
   min-height: 100vh;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .auth-shell {
@@ -363,6 +365,12 @@ body {
 }
 
 @media (max-width: 860px) {
+  .auth-shell {
+    align-items: flex-start;
+    min-height: 100svh;
+    overflow-y: auto;
+  }
+
   .login-layout {
     grid-template-columns: 1fr;
     max-width: 520px;
