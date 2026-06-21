@@ -132,7 +132,7 @@ export class ConnectionForm {
           <label>用户名</label>
           <div class="business-field">
             <span class="material-symbols-outlined">person</span>
-            <input id="username" class="business-field-input text-[13px]" placeholder="root / admin" type="text" required>
+            <input id="username" class="business-field-input text-[13px]" type="text" value="root" required>
           </div>
         </div>
         <div class="form-field">
@@ -234,7 +234,7 @@ export class ConnectionForm {
     }
     (document.getElementById('host') as HTMLInputElement).value = cred.host || '';
     (document.getElementById('port') as HTMLInputElement).value = cred.port || '22';
-    (document.getElementById('username') as HTMLInputElement).value = cred.username || '';
+    (document.getElementById('username') as HTMLInputElement).value = cred.username || 'root';
     (document.getElementById('password') as HTMLInputElement).value = cred.password || '';
     (document.getElementById('private-key') as HTMLTextAreaElement).value = (cred as any).privateKey || '';
     (document.getElementById('remember-me') as HTMLInputElement).checked = true;
