@@ -110,7 +110,44 @@
         </div>
       </header>
 
-      <main class="flex-1 p-6 pb-14 relative bg-surface-container-lowest overflow-hidden">
+      <main class="terminal-main flex-1 p-6 pb-14 relative bg-surface-container-lowest overflow-hidden">
+        <aside class="server-sidebar">
+          <div class="server-sidebar-head">
+            <div>
+              <span>服务器状态</span>
+              <strong id="metrics-updated">等待连接</strong>
+            </div>
+            <button id="server-metrics-refresh" type="button" title="刷新状态">
+              <span class="material-symbols-outlined">refresh</span>
+            </button>
+          </div>
+          <div class="metric-list">
+            <div class="metric-row">
+              <span>负载</span>
+              <strong id="metric-load">--</strong>
+            </div>
+            <div class="metric-row">
+              <span>CPU</span>
+              <strong id="metric-cpu">--</strong>
+              <div class="metric-bar"><i id="metric-cpu-bar"></i></div>
+            </div>
+            <div class="metric-row">
+              <span>内存</span>
+              <strong id="metric-memory">--</strong>
+              <div class="metric-bar"><i id="metric-memory-bar"></i></div>
+            </div>
+            <div class="metric-row">
+              <span>Swap</span>
+              <strong id="metric-swap">--</strong>
+              <div class="metric-bar"><i id="metric-swap-bar"></i></div>
+            </div>
+            <div class="metric-row">
+              <span>硬盘</span>
+              <strong id="metric-disk">--</strong>
+              <div class="metric-bar"><i id="metric-disk-bar"></i></div>
+            </div>
+          </div>
+        </aside>
         <div id="terminal-wrapper" class="h-full w-full border border-outline-variant bg-white rounded-lg p-4 overflow-hidden font-code text-[13px] text-slate-800 relative z-0 flex flex-col shadow-sm">
           <div class="flex justify-between items-center border-b border-outline-variant pb-2 mb-4 text-slate-500 text-[11px]">
             <div class="flex gap-6 flex-wrap">

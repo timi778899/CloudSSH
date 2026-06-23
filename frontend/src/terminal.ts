@@ -75,6 +75,11 @@ export class SSHTerminal {
   private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
   private lastConfig: SSHConnectionConfig | null = null;
   private allowReconnect: boolean = false;
+  private metricsBuffer: string = '';
+  private isCapturingMetrics: boolean = false;
+  private isRefreshingMetrics: boolean = false;
+  private readonly metricsStartMarker = '__KVMIDC_SYSINFO_START__';
+  private readonly metricsEndMarker = '__KVMIDC_SYSINFO_END__';
 
   constructor(containerId: string) {
     this.container = document.getElementById(containerId)!;
@@ -101,6 +106,10 @@ export class SSHTerminal {
     this.container.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       this.showContextMenu(e);
+    });
+
+    document.getElementById('server-metrics-refresh')?.addEventListener('click', () => {
+      this.refreshServerMetrics();
     });
   }
 
@@ -181,6 +190,9 @@ export class SSHTerminal {
                   document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span> \u72b6\u6001\uff1a\u5728\u7ebf';
                   document.getElementById('term-status')!.innerHTML = '<div class="w-2 h-2 rounded-full bg-emerald-500"></div> \u5df2\u8fde\u63a5';
                 }
+                if (msg.message === 'Shell \u5df2\u5c31\u7eea') {
+                  window.setTimeout(() => this.refreshServerMetrics(), 600);
+                }
                 break;
               case 'error':
                 this.allowReconnect = false;
@@ -194,7 +206,10 @@ export class SSHTerminal {
         } else {
           const reader = new FileReader();
           reader.onload = () => {
-            zmodemHandler.consume(reader.result as ArrayBuffer);
+            const data = reader.result as ArrayBuffer;
+            if (!this.captureMetricsOutput(data)) {
+              zmodemHandler.consume(data);
+            }
           };
           reader.readAsArrayBuffer(event.data);
         }
@@ -207,6 +222,7 @@ export class SSHTerminal {
         );
         document.getElementById('term-status')!.innerHTML = '<div class="w-2 h-2 rounded-full bg-red-500"></div> \u5df2\u65ad\u5f00';
         document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-300 inline-block"></span> \u72b6\u6001\uff1a\u79bb\u7ebf';
+        this.setMetricsStatus('\u5df2\u65ad\u5f00');
         
         if (event.code !== 1000 && this.allowReconnect && this.lastConfig && this.reconnectAttempts < this.maxReconnectAttempts) {
           this.scheduleReconnect();
@@ -242,6 +258,134 @@ export class SSHTerminal {
 
   fit(): void {
     this.fitAddon.fit();
+  }
+
+  refreshServerMetrics(): void {
+    if (this.ws?.readyState !== WebSocket.OPEN || this.isRefreshingMetrics) return;
+
+    this.isRefreshingMetrics = true;
+    this.setMetricsStatus('\u6b63\u5728\u5237\u65b0...');
+    this.ws.send(this.buildMetricsCommand());
+
+    window.setTimeout(() => {
+      if (this.isRefreshingMetrics) {
+        this.isRefreshingMetrics = false;
+        this.isCapturingMetrics = false;
+        this.metricsBuffer = '';
+        this.setMetricsStatus('\u5237\u65b0\u8d85\u65f6');
+      }
+    }, 6000);
+  }
+
+  private buildMetricsCommand(): string {
+    return [
+      `__KVMIDC_S='__KVMIDC_SYSINFO_'"START__"; __KVMIDC_E='__KVMIDC_SYSINFO_'"END__";`,
+      `printf '\\n%s\\n' "$__KVMIDC_S";`,
+      `LOAD=$(awk '{print $1" "$2" "$3}' /proc/loadavg 2>/dev/null || printf -- '-');`,
+      `read _ u1 n1 s1 i1 io1 irq1 sirq1 st1 _ < /proc/stat 2>/dev/null;`,
+      `t1=$((u1+n1+s1+i1+io1+irq1+sirq1+st1)); idle1=$((i1+io1));`,
+      `sleep 1;`,
+      `read _ u2 n2 s2 i2 io2 irq2 sirq2 st2 _ < /proc/stat 2>/dev/null;`,
+      `t2=$((u2+n2+s2+i2+io2+irq2+sirq2+st2)); idle2=$((i2+io2));`,
+      `dt=$((t2-t1)); di=$((idle2-idle1));`,
+      `if [ "$dt" -gt 0 ] 2>/dev/null; then CPU=$((100*(dt-di)/dt)); else CPU=-; fi;`,
+      `MEM=$(awk '/MemTotal/{t=$2}/MemAvailable/{a=$2}END{if(t>0) printf "%.0f %.0f %.0f",(t-a)/1024,t/1024,(t-a)*100/t; else printf "- - -"}' /proc/meminfo 2>/dev/null);`,
+      `SWAP=$(awk '/SwapTotal/{t=$2}/SwapFree/{f=$2}END{if(t>0) printf "%.0f %.0f %.0f",(t-f)/1024,t/1024,(t-f)*100/t; else printf "0 0 0"}' /proc/meminfo 2>/dev/null);`,
+      `DISK=$(df -Pm / 2>/dev/null | awk 'NR==2{gsub("%","",$5); printf "%s %s %s",$3,$2,$5}');`,
+      `printf 'load=%s\\ncpu=%s\\nmem=%s\\nswap=%s\\ndisk=%s\\n' "$LOAD" "$CPU" "$MEM" "$SWAP" "$DISK";`,
+      `printf '%s\\n' "$__KVMIDC_E";`,
+    ].join(' ') + '\n';
+  }
+
+  private captureMetricsOutput(data: ArrayBuffer): boolean {
+    const text = new TextDecoder().decode(data);
+    if (!this.isCapturingMetrics && !text.includes(this.metricsStartMarker)) {
+      return false;
+    }
+
+    let chunk = text;
+    if (!this.isCapturingMetrics) {
+      const startIndex = chunk.indexOf(this.metricsStartMarker);
+      if (startIndex === -1) return false;
+      this.isCapturingMetrics = true;
+      this.metricsBuffer = '';
+      chunk = chunk.slice(startIndex + this.metricsStartMarker.length);
+    }
+
+    const endIndex = chunk.indexOf(this.metricsEndMarker);
+    if (endIndex >= 0) {
+      this.metricsBuffer += chunk.slice(0, endIndex);
+      const visibleTail = chunk.slice(endIndex + this.metricsEndMarker.length);
+      this.isCapturingMetrics = false;
+      this.isRefreshingMetrics = false;
+      this.renderServerMetrics(this.metricsBuffer);
+      this.metricsBuffer = '';
+      if (visibleTail) this.terminal.write(visibleTail);
+      return true;
+    }
+
+    this.metricsBuffer += chunk;
+    return true;
+  }
+
+  private renderServerMetrics(raw: string): void {
+    const clean = raw.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '').replace(/\r/g, '');
+    const values = new Map<string, string>();
+    for (const line of clean.split('\n')) {
+      const [key, ...rest] = line.trim().split('=');
+      if (key && rest.length) values.set(key, rest.join('='));
+    }
+
+    const load = values.get('load') || '--';
+    this.setText('metric-load', load);
+
+    const cpu = this.toPercent(values.get('cpu'));
+    this.setText('metric-cpu', cpu == null ? '--' : `${cpu}%`);
+    this.setBar('metric-cpu-bar', cpu);
+
+    this.renderSizedMetric('metric-memory', 'metric-memory-bar', values.get('mem'));
+    this.renderSizedMetric('metric-swap', 'metric-swap-bar', values.get('swap'));
+    this.renderSizedMetric('metric-disk', 'metric-disk-bar', values.get('disk'));
+    this.setMetricsStatus(new Date().toLocaleTimeString('zh-CN', { hour12: false }));
+  }
+
+  private renderSizedMetric(textId: string, barId: string, value?: string): void {
+    const parts = (value || '').split(/\s+/).map(Number);
+    if (parts.length < 3 || parts.some(Number.isNaN)) {
+      this.setText(textId, '--');
+      this.setBar(barId, null);
+      return;
+    }
+
+    const [used, total, percent] = parts;
+    this.setText(textId, `${this.formatMiB(used)} / ${this.formatMiB(total)} (${Math.round(percent)}%)`);
+    this.setBar(barId, percent);
+  }
+
+  private toPercent(value?: string): number | null {
+    if (!value || value === '-') return null;
+    const parsed = Number(value);
+    if (Number.isNaN(parsed)) return null;
+    return Math.max(0, Math.min(100, Math.round(parsed)));
+  }
+
+  private formatMiB(value: number): string {
+    if (value >= 1024) return `${(value / 1024).toFixed(value >= 10240 ? 0 : 1)}G`;
+    return `${Math.round(value)}M`;
+  }
+
+  private setText(id: string, value: string): void {
+    const element = document.getElementById(id);
+    if (element) element.textContent = value;
+  }
+
+  private setBar(id: string, percent: number | null): void {
+    const element = document.getElementById(id) as HTMLElement | null;
+    if (element) element.style.width = `${percent == null ? 0 : Math.max(0, Math.min(100, percent))}%`;
+  }
+
+  private setMetricsStatus(value: string): void {
+    this.setText('metrics-updated', value);
   }
 
   private createContextMenu(): HTMLDivElement {
