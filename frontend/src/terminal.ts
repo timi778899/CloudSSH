@@ -78,8 +78,8 @@ export class SSHTerminal {
   private metricsBuffer: string = '';
   private isCapturingMetrics: boolean = false;
   private isRefreshingMetrics: boolean = false;
-  private metricsInterval: ReturnType<typeof setInterval> | null = null;
-  private metricsTimeout: ReturnType<typeof setTimeout> | null = null;
+  private metricsInterval: number | null = null;
+  private metricsTimeout: number | null = null;
   private readonly metricsStartMarker = '__KVMIDC_SYSINFO_START__';
   private readonly metricsEndMarker = '__KVMIDC_SYSINFO_END__';
 
