@@ -75,13 +75,11 @@ export class SSHTerminal {
   private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
   private lastConfig: SSHConnectionConfig | null = null;
   private allowReconnect: boolean = false;
+  private metricsWs: WebSocket | null = null;
   private metricsBuffer: string = '';
-  private isCapturingMetrics: boolean = false;
   private isRefreshingMetrics: boolean = false;
   private metricsInterval: number | null = null;
   private metricsTimeout: number | null = null;
-  private suppressMetricsTailUntil: number = 0;
-  private lastUserInputAt: number = 0;
   private readonly metricsStartMarker = '__KVMIDC_SYSINFO_START__';
   private readonly metricsEndMarker = '__KVMIDC_SYSINFO_END__';
 
@@ -113,7 +111,11 @@ export class SSHTerminal {
     });
 
     document.getElementById('server-metrics-refresh')?.addEventListener('click', () => {
-      this.refreshServerMetrics(true);
+      if (this.metricsWs?.readyState === WebSocket.OPEN) {
+        this.refreshServerMetrics();
+      } else {
+        this.startServerMetricsSession();
+      }
     });
   }
 
@@ -195,7 +197,7 @@ export class SSHTerminal {
                   document.getElementById('term-status')!.innerHTML = '<div class="w-2 h-2 rounded-full bg-emerald-500"></div> \u5df2\u8fde\u63a5';
                 }
                 if (msg.message === 'Shell \u5df2\u5c31\u7eea') {
-                  window.setTimeout(() => this.startServerMetricsPolling(), 600);
+                  window.setTimeout(() => this.startServerMetricsSession(), 600);
                 }
                 break;
               case 'error':
@@ -210,10 +212,7 @@ export class SSHTerminal {
         } else {
           const reader = new FileReader();
           reader.onload = () => {
-            const data = reader.result as ArrayBuffer;
-            if (!this.captureMetricsOutput(data)) {
-              zmodemHandler.consume(data);
-            }
+            zmodemHandler.consume(reader.result as ArrayBuffer);
           };
           reader.readAsArrayBuffer(event.data);
         }
@@ -241,7 +240,6 @@ export class SSHTerminal {
 
       this.disposables.push(
         this.terminal.onData((data) => {
-          this.lastUserInputAt = Date.now();
           if (this.ws?.readyState === WebSocket.OPEN) {
             this.ws.send(data);
           }
@@ -266,21 +264,18 @@ export class SSHTerminal {
     this.fitAddon.fit();
   }
 
-  refreshServerMetrics(force = false): void {
-    if (this.ws?.readyState !== WebSocket.OPEN || this.isRefreshingMetrics) return;
-    if (!force && Date.now() - this.lastUserInputAt < 10000) return;
+  refreshServerMetrics(): void {
+    if (this.metricsWs?.readyState !== WebSocket.OPEN || this.isRefreshingMetrics) return;
 
     this.isRefreshingMetrics = true;
-    this.isCapturingMetrics = true;
     this.metricsBuffer = '';
     this.setMetricsStatus('\u6b63\u5728\u5237\u65b0...');
-    this.ws.send(this.buildMetricsCommand());
+    this.metricsWs.send(this.buildMetricsCommand());
 
     if (this.metricsTimeout) clearTimeout(this.metricsTimeout);
     this.metricsTimeout = window.setTimeout(() => {
       if (this.isRefreshingMetrics) {
         this.isRefreshingMetrics = false;
-        this.isCapturingMetrics = false;
         this.metricsBuffer = '';
         this.setMetricsStatus('\u5237\u65b0\u8d85\u65f6');
       }
@@ -288,13 +283,65 @@ export class SSHTerminal {
     }, 6000);
   }
 
-  private startServerMetricsPolling(): void {
+  private startServerMetricsSession(): void {
+    if (!this.lastConfig || this.metricsWs?.readyState === WebSocket.OPEN || this.metricsWs?.readyState === WebSocket.CONNECTING) {
+      return;
+    }
+
     this.stopServerMetricsPolling();
-    this.refreshServerMetrics(true);
+    this.setMetricsStatus('\u6b63\u5728\u8fde\u63a5...');
+
+    const wsUrl = new URL(window.location.href);
+    wsUrl.protocol = wsUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+    wsUrl.pathname = '/api/ssh';
+
+    this.metricsWs = new WebSocket(wsUrl.toString());
+    this.metricsWs.onopen = () => {
+      this.metricsWs?.send(JSON.stringify({
+        host: this.lastConfig!.host,
+        port: this.lastConfig!.port,
+        username: this.lastConfig!.username,
+        password: this.lastConfig!.password,
+        authMethod: this.lastConfig!.authMethod,
+        privateKey: this.lastConfig!.privateKey,
+      }));
+    };
+
+    this.metricsWs.onmessage = (event) => {
+      if (typeof event.data === 'string') {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'status' && msg.message === 'Shell \u5df2\u5c31\u7eea') {
+            this.startServerMetricsPolling();
+          } else if (msg.type === 'error') {
+            this.setMetricsStatus('\u72b6\u6001\u83b7\u53d6\u5931\u8d25');
+          }
+        } catch {}
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => this.captureMetricsOutput(reader.result as ArrayBuffer);
+      reader.readAsArrayBuffer(event.data);
+    };
+
+    this.metricsWs.onclose = () => {
+      this.stopServerMetricsPolling(false);
+      this.metricsWs = null;
+    };
+
+    this.metricsWs.onerror = () => {
+      this.setMetricsStatus('\u72b6\u6001\u83b7\u53d6\u5931\u8d25');
+    };
+  }
+
+  private startServerMetricsPolling(): void {
+    if (this.metricsInterval) return;
+    this.refreshServerMetrics();
     this.metricsInterval = window.setInterval(() => this.refreshServerMetrics(), 5000);
   }
 
-  private stopServerMetricsPolling(): void {
+  private stopServerMetricsPolling(closeSocket = true): void {
     if (this.metricsInterval) {
       clearInterval(this.metricsInterval);
       this.metricsInterval = null;
@@ -304,8 +351,11 @@ export class SSHTerminal {
       this.metricsTimeout = null;
     }
     this.isRefreshingMetrics = false;
-    this.isCapturingMetrics = false;
     this.metricsBuffer = '';
+    if (closeSocket && this.metricsWs) {
+      this.metricsWs.close(1000);
+      this.metricsWs = null;
+    }
   }
 
   private buildMetricsCommand(): string {
@@ -330,32 +380,17 @@ export class SSHTerminal {
 
   private captureMetricsOutput(data: ArrayBuffer): boolean {
     const text = new TextDecoder().decode(data);
-    if (Date.now() < this.suppressMetricsTailUntil) {
-      return true;
-    }
-    if (!this.isCapturingMetrics && !text.includes(this.metricsStartMarker)) {
-      return false;
-    }
-
     let chunk = text;
-    if (this.isCapturingMetrics && !this.metricsBuffer) {
-      const startIndex = chunk.indexOf(this.metricsStartMarker);
-      if (startIndex === -1) return true;
-      chunk = chunk.slice(startIndex + this.metricsStartMarker.length);
-    }
 
-    if (!this.isCapturingMetrics) {
+    if (!this.metricsBuffer) {
       const startIndex = chunk.indexOf(this.metricsStartMarker);
       if (startIndex === -1) return false;
-      this.isCapturingMetrics = true;
-      this.metricsBuffer = '';
       chunk = chunk.slice(startIndex + this.metricsStartMarker.length);
     }
 
     const endIndex = chunk.indexOf(this.metricsEndMarker);
     if (endIndex >= 0) {
       this.metricsBuffer += chunk.slice(0, endIndex);
-      this.isCapturingMetrics = false;
       this.isRefreshingMetrics = false;
       if (this.metricsTimeout) {
         clearTimeout(this.metricsTimeout);
@@ -363,7 +398,6 @@ export class SSHTerminal {
       }
       this.renderServerMetrics(this.metricsBuffer);
       this.metricsBuffer = '';
-      this.suppressMetricsTailUntil = Date.now() + 500;
       return true;
     }
 
