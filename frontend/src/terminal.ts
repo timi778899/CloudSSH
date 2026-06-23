@@ -75,6 +75,7 @@ export class SSHTerminal {
   private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
   private lastConfig: SSHConnectionConfig | null = null;
   private allowReconnect: boolean = false;
+  private isPrimarySessionActive: boolean = false;
   private metricsWs: WebSocket | null = null;
   private metricsBuffer: string = '';
   private isRefreshingMetrics: boolean = false;
@@ -192,6 +193,7 @@ export class SSHTerminal {
                 this.terminal.writeln(`\x1b[32m[*] ${msg.message}\x1b[0m`);
                 if (msg.message === '\u8ba4\u8bc1\u6210\u529f') {
                   this.allowReconnect = true;
+                  this.isPrimarySessionActive = true;
                   this.reconnectAttempts = 0;
                   document.getElementById('status-text')!.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span> \u72b6\u6001\uff1a\u5728\u7ebf';
                   document.getElementById('term-status')!.innerHTML = '<div class="w-2 h-2 rounded-full bg-emerald-500"></div> \u5df2\u8fde\u63a5';
@@ -219,6 +221,7 @@ export class SSHTerminal {
       };
 
       this.ws.onclose = (event) => {
+        this.isPrimarySessionActive = false;
         this.stopHeartbeat();
         this.stopServerMetricsPolling();
         this.terminal.writeln(
@@ -265,7 +268,7 @@ export class SSHTerminal {
   }
 
   refreshServerMetrics(): void {
-    if (this.metricsWs?.readyState !== WebSocket.OPEN || this.isRefreshingMetrics) return;
+    if (!this.isPrimarySessionActive || this.metricsWs?.readyState !== WebSocket.OPEN || this.isRefreshingMetrics) return;
 
     this.isRefreshingMetrics = true;
     this.metricsBuffer = '';
@@ -284,7 +287,7 @@ export class SSHTerminal {
   }
 
   private startServerMetricsSession(): void {
-    if (!this.lastConfig || this.metricsWs?.readyState === WebSocket.OPEN || this.metricsWs?.readyState === WebSocket.CONNECTING) {
+    if (!this.isPrimarySessionActive || !this.lastConfig || this.metricsWs?.readyState === WebSocket.OPEN || this.metricsWs?.readyState === WebSocket.CONNECTING) {
       return;
     }
 
@@ -308,6 +311,11 @@ export class SSHTerminal {
     };
 
     this.metricsWs.onmessage = (event) => {
+      if (!this.isPrimarySessionActive) {
+        this.stopServerMetricsPolling();
+        return;
+      }
+
       if (typeof event.data === 'string') {
         try {
           const msg = JSON.parse(event.data);
@@ -336,6 +344,7 @@ export class SSHTerminal {
   }
 
   private startServerMetricsPolling(): void {
+    if (!this.isPrimarySessionActive) return;
     if (this.metricsInterval) return;
     this.refreshServerMetrics();
     this.metricsInterval = window.setInterval(() => this.refreshServerMetrics(), 5000);
@@ -583,6 +592,7 @@ export class SSHTerminal {
     }
     this.reconnectAttempts = this.maxReconnectAttempts;
     this.allowReconnect = false;
+    this.isPrimarySessionActive = false;
     this.ws?.close(1000);
     this.ws = null;
     this.disposables.forEach(d => d.dispose());
