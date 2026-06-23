@@ -78,6 +78,8 @@ export class SSHTerminal {
   private metricsBuffer: string = '';
   private isCapturingMetrics: boolean = false;
   private isRefreshingMetrics: boolean = false;
+  private metricsInterval: ReturnType<typeof setInterval> | null = null;
+  private metricsTimeout: ReturnType<typeof setTimeout> | null = null;
   private readonly metricsStartMarker = '__KVMIDC_SYSINFO_START__';
   private readonly metricsEndMarker = '__KVMIDC_SYSINFO_END__';
 
@@ -191,7 +193,7 @@ export class SSHTerminal {
                   document.getElementById('term-status')!.innerHTML = '<div class="w-2 h-2 rounded-full bg-emerald-500"></div> \u5df2\u8fde\u63a5';
                 }
                 if (msg.message === 'Shell \u5df2\u5c31\u7eea') {
-                  window.setTimeout(() => this.refreshServerMetrics(), 600);
+                  window.setTimeout(() => this.startServerMetricsPolling(), 600);
                 }
                 break;
               case 'error':
@@ -217,6 +219,7 @@ export class SSHTerminal {
 
       this.ws.onclose = (event) => {
         this.stopHeartbeat();
+        this.stopServerMetricsPolling();
         this.terminal.writeln(
           `\x1b[33m[*] \u8fde\u63a5\u5df2\u5173\u95ed\uff08\u4ee3\u7801\uff1a${event.code}\uff09\x1b[0m`
         );
@@ -264,17 +267,41 @@ export class SSHTerminal {
     if (this.ws?.readyState !== WebSocket.OPEN || this.isRefreshingMetrics) return;
 
     this.isRefreshingMetrics = true;
+    this.isCapturingMetrics = true;
+    this.metricsBuffer = '';
     this.setMetricsStatus('\u6b63\u5728\u5237\u65b0...');
     this.ws.send(this.buildMetricsCommand());
 
-    window.setTimeout(() => {
+    if (this.metricsTimeout) clearTimeout(this.metricsTimeout);
+    this.metricsTimeout = window.setTimeout(() => {
       if (this.isRefreshingMetrics) {
         this.isRefreshingMetrics = false;
         this.isCapturingMetrics = false;
         this.metricsBuffer = '';
         this.setMetricsStatus('\u5237\u65b0\u8d85\u65f6');
       }
+      this.metricsTimeout = null;
     }, 6000);
+  }
+
+  private startServerMetricsPolling(): void {
+    this.stopServerMetricsPolling();
+    this.refreshServerMetrics();
+    this.metricsInterval = window.setInterval(() => this.refreshServerMetrics(), 5000);
+  }
+
+  private stopServerMetricsPolling(): void {
+    if (this.metricsInterval) {
+      clearInterval(this.metricsInterval);
+      this.metricsInterval = null;
+    }
+    if (this.metricsTimeout) {
+      clearTimeout(this.metricsTimeout);
+      this.metricsTimeout = null;
+    }
+    this.isRefreshingMetrics = false;
+    this.isCapturingMetrics = false;
+    this.metricsBuffer = '';
   }
 
   private buildMetricsCommand(): string {
@@ -304,6 +331,12 @@ export class SSHTerminal {
     }
 
     let chunk = text;
+    if (this.isCapturingMetrics && !this.metricsBuffer) {
+      const startIndex = chunk.indexOf(this.metricsStartMarker);
+      if (startIndex === -1) return true;
+      chunk = chunk.slice(startIndex + this.metricsStartMarker.length);
+    }
+
     if (!this.isCapturingMetrics) {
       const startIndex = chunk.indexOf(this.metricsStartMarker);
       if (startIndex === -1) return false;
@@ -315,12 +348,14 @@ export class SSHTerminal {
     const endIndex = chunk.indexOf(this.metricsEndMarker);
     if (endIndex >= 0) {
       this.metricsBuffer += chunk.slice(0, endIndex);
-      const visibleTail = chunk.slice(endIndex + this.metricsEndMarker.length);
       this.isCapturingMetrics = false;
       this.isRefreshingMetrics = false;
+      if (this.metricsTimeout) {
+        clearTimeout(this.metricsTimeout);
+        this.metricsTimeout = null;
+      }
       this.renderServerMetrics(this.metricsBuffer);
       this.metricsBuffer = '';
-      if (visibleTail) this.terminal.write(visibleTail);
       return true;
     }
 
@@ -499,6 +534,7 @@ export class SSHTerminal {
   disconnect(): void {
     this.hideContextMenu();
     this.stopHeartbeat();
+    this.stopServerMetricsPolling();
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
       this.reconnectTimeout = null;
