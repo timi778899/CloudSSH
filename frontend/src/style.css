@@ -183,12 +183,24 @@ body {
   min-width: 0;
   flex: 1;
   height: 48px;
-  border: 0;
-  outline: none;
-  background: transparent;
+  border: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
   color: #172033;
   font-family: inherit;
-  padding: 0;
+  padding: 0 !important;
+  box-shadow: none !important;
+  appearance: none;
+  --tw-ring-color: transparent;
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-shadow: 0 0 #0000;
+}
+
+.business-field-input:focus {
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  --tw-ring-shadow: 0 0 #0000;
 }
 
 .business-field-input::placeholder {
