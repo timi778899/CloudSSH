@@ -80,6 +80,8 @@ export class SSHTerminal {
   private isRefreshingMetrics: boolean = false;
   private metricsInterval: number | null = null;
   private metricsTimeout: number | null = null;
+  private suppressMetricsTailUntil: number = 0;
+  private lastUserInputAt: number = 0;
   private readonly metricsStartMarker = '__KVMIDC_SYSINFO_START__';
   private readonly metricsEndMarker = '__KVMIDC_SYSINFO_END__';
 
@@ -111,7 +113,7 @@ export class SSHTerminal {
     });
 
     document.getElementById('server-metrics-refresh')?.addEventListener('click', () => {
-      this.refreshServerMetrics();
+      this.refreshServerMetrics(true);
     });
   }
 
@@ -239,6 +241,7 @@ export class SSHTerminal {
 
       this.disposables.push(
         this.terminal.onData((data) => {
+          this.lastUserInputAt = Date.now();
           if (this.ws?.readyState === WebSocket.OPEN) {
             this.ws.send(data);
           }
@@ -263,8 +266,9 @@ export class SSHTerminal {
     this.fitAddon.fit();
   }
 
-  refreshServerMetrics(): void {
+  refreshServerMetrics(force = false): void {
     if (this.ws?.readyState !== WebSocket.OPEN || this.isRefreshingMetrics) return;
+    if (!force && Date.now() - this.lastUserInputAt < 10000) return;
 
     this.isRefreshingMetrics = true;
     this.isCapturingMetrics = true;
@@ -286,7 +290,7 @@ export class SSHTerminal {
 
   private startServerMetricsPolling(): void {
     this.stopServerMetricsPolling();
-    this.refreshServerMetrics();
+    this.refreshServerMetrics(true);
     this.metricsInterval = window.setInterval(() => this.refreshServerMetrics(), 5000);
   }
 
@@ -326,6 +330,9 @@ export class SSHTerminal {
 
   private captureMetricsOutput(data: ArrayBuffer): boolean {
     const text = new TextDecoder().decode(data);
+    if (Date.now() < this.suppressMetricsTailUntil) {
+      return true;
+    }
     if (!this.isCapturingMetrics && !text.includes(this.metricsStartMarker)) {
       return false;
     }
@@ -356,6 +363,7 @@ export class SSHTerminal {
       }
       this.renderServerMetrics(this.metricsBuffer);
       this.metricsBuffer = '';
+      this.suppressMetricsTailUntil = Date.now() + 500;
       return true;
     }
 
