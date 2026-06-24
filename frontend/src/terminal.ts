@@ -371,6 +371,9 @@ export class SSHTerminal {
     return [
       `__KVMIDC_S='__KVMIDC_SYSINFO_'"START__"; __KVMIDC_E='__KVMIDC_SYSINFO_'"END__";`,
       `printf '\\n%s\\n' "$__KVMIDC_S";`,
+      `OS=$(awk -F= '/^PRETTY_NAME=/{gsub(/"/,"",$2); print $2; exit}' /etc/os-release 2>/dev/null); [ -n "$OS" ] || OS=$(uname -srm 2>/dev/null || printf -- '-');`,
+      `TZ=$(timedatectl show -p Timezone --value 2>/dev/null); [ -n "$TZ" ] || TZ=$(readlink /etc/localtime 2>/dev/null | sed 's#.*zoneinfo/##'); [ -n "$TZ" ] || TZ=$(date +%Z 2>/dev/null || printf -- '-');`,
+      `UP=$(awk '{s=int($1); d=int(s/86400); h=int((s%86400)/3600); m=int((s%3600)/60); if(d>0) printf "%d天 %d小时 %d分钟",d,h,m; else if(h>0) printf "%d小时 %d分钟",h,m; else printf "%d分钟",m}' /proc/uptime 2>/dev/null || printf -- '-');`,
       `LOAD=$(awk '{print $1" "$2" "$3}' /proc/loadavg 2>/dev/null || printf -- '-');`,
       `read _ u1 n1 s1 i1 io1 irq1 sirq1 st1 _ < /proc/stat 2>/dev/null;`,
       `t1=$((u1+n1+s1+i1+io1+irq1+sirq1+st1)); idle1=$((i1+io1));`,
@@ -382,7 +385,7 @@ export class SSHTerminal {
       `MEM=$(awk '/MemTotal/{t=$2}/MemAvailable/{a=$2}END{if(t>0) printf "%.0f %.0f %.0f",(t-a)/1024,t/1024,(t-a)*100/t; else printf "- - -"}' /proc/meminfo 2>/dev/null);`,
       `SWAP=$(awk '/SwapTotal/{t=$2}/SwapFree/{f=$2}END{if(t>0) printf "%.0f %.0f %.0f",(t-f)/1024,t/1024,(t-f)*100/t; else printf "0 0 0"}' /proc/meminfo 2>/dev/null);`,
       `DISK=$(df -Pm / 2>/dev/null | awk 'NR==2{gsub("%","",$5); printf "%s %s %s",$3,$2,$5}');`,
-      `printf 'load=%s\\ncpu=%s\\nmem=%s\\nswap=%s\\ndisk=%s\\n' "$LOAD" "$CPU" "$MEM" "$SWAP" "$DISK";`,
+      `printf 'system=%s\\ntimezone=%s\\nuptime=%s\\nload=%s\\ncpu=%s\\nmem=%s\\nswap=%s\\ndisk=%s\\n' "$OS" "$TZ" "$UP" "$LOAD" "$CPU" "$MEM" "$SWAP" "$DISK";`,
       `printf '%s\\n' "$__KVMIDC_E";`,
     ].join(' ') + '\n';
   }
@@ -421,6 +424,10 @@ export class SSHTerminal {
       const [key, ...rest] = line.trim().split('=');
       if (key && rest.length) values.set(key, rest.join('='));
     }
+
+    this.setText('metric-system', values.get('system') || '--');
+    this.setText('metric-timezone', values.get('timezone') || '--');
+    this.setText('metric-uptime', values.get('uptime') || '--');
 
     const load = values.get('load') || '--';
     this.setText('metric-load', load);
