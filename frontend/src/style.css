@@ -1,3 +1,5 @@
+@import './harmony-font.css';
+
 * {
   margin: 0;
   padding: 0;
@@ -5,13 +7,23 @@
 }
 
 body {
-  font-family: 'Inter', 'Microsoft YaHei', 'PingFang SC', Arial, sans-serif;
+  font-family: 'HarmonyOS Sans SC UI', 'Microsoft YaHei', 'PingFang SC', Arial, sans-serif;
   background: #f5f9ff;
   color: #172033;
   min-height: 100vh;
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+.font-body,
+.font-headline,
+.font-label {
+  font-family: 'HarmonyOS Sans SC UI', 'Microsoft YaHei', 'PingFang SC', Arial, sans-serif !important;
+}
+
+.font-code {
+  font-family: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace !important;
 }
 
 .auth-shell {
