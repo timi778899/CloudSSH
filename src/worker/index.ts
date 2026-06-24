@@ -70,6 +70,28 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
+    if (url.pathname === '/api/session-token' && request.method === 'OPTIONS') {
+      return new Response(null, { status: 204 });
+    }
+
+    if (url.pathname === '/api/session-token' && request.method === 'POST') {
+      if (!env.SSH_API_TOKEN) {
+        return Response.json({ success: false, error: 'SSH_API_TOKEN is not configured' }, { status: 503 });
+      }
+
+      const auth = request.headers.get('Authorization') || '';
+      const expected = `Bearer ${env.SSH_API_TOKEN}`;
+      if (auth !== expected) {
+        return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      }
+
+      return handleSessionTokenRequest(request, env);
+    }
+
+    if (url.pathname.startsWith('/api/session-token/') && request.method === 'GET') {
+      return handleSessionTokenRequest(request, env);
+    }
+
     // Verify Turnstile token and issue verification cookie
     if (url.pathname === '/api/verify' && request.method === 'POST') {
       if (!env.TURNSTILE_SECRET) {
@@ -151,6 +173,12 @@ export default {
     });
   },
 };
+
+function handleSessionTokenRequest(request: Request, env: Env): Promise<Response> {
+  const doId = env.SSH_SESSION.idFromName('session-token-store');
+  const stub = env.SSH_SESSION.get(doId);
+  return stub.fetch(request);
+}
 
 async function handleSSHConnection(request: Request, env: Env): Promise<Response> {
   const upgradeHeader = request.headers.get('Upgrade');

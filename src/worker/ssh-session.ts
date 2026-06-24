@@ -681,7 +681,7 @@ export class SSHSession {
     } else {
       authRequest = SSHAuth.buildPasswordAuthRequest(
         this.config.username,
-        this.config.password
+        this.config.password || ''
       );
     }
 

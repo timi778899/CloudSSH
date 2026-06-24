@@ -10,6 +10,7 @@ workers_dev = false
 # [vars]
 # TURNSTILE_SECRET = "your-turnstile-secret-key"
 # TURNSTILE_SITEKEY = "your-turnstile-site-key"
+# SSH_API_TOKEN = "your-server-side-api-token"
 
 [[routes]]
 pattern = "ssh.kvmidc.com"

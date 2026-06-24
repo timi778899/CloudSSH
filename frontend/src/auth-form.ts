@@ -1,6 +1,14 @@
-import { SSHTerminal } from './terminal';
+import { SSHTerminal, SSHConnectionConfig } from './terminal';
 
-// --- Credential encryption helpers ---
+type StoredCredential = {
+  host?: string;
+  port?: string;
+  username?: string;
+  password?: string;
+  privateKey?: string;
+  authMethod?: 'password' | 'publickey' | 'key';
+};
+
 async function deriveKey(salt: Uint8Array): Promise<CryptoKey> {
   const raw = new TextEncoder().encode(window.location.origin + ':cloudssh');
   const baseKey = await crypto.subtle.importKey('raw', raw, 'PBKDF2', false, ['deriveKey']);
@@ -19,7 +27,6 @@ async function encryptCredentials(data: object): Promise<string> {
   const key = await deriveKey(salt);
   const encoded = new TextEncoder().encode(JSON.stringify(data));
   const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encoded));
-  // Format: base64(salt + iv + ciphertext)
   const combined = new Uint8Array(salt.length + iv.length + encrypted.length);
   combined.set(salt, 0);
   combined.set(iv, salt.length);
@@ -27,7 +34,7 @@ async function encryptCredentials(data: object): Promise<string> {
   return btoa(String.fromCharCode(...combined));
 }
 
-async function decryptCredentials(stored: string): Promise<{ host: string; port: string; username: string; password: string } | null> {
+async function decryptCredentials(stored: string): Promise<StoredCredential | null> {
   try {
     const raw = Uint8Array.from(atob(stored), c => c.charCodeAt(0));
     const salt = raw.slice(0, 16);
@@ -47,11 +54,16 @@ export class ConnectionForm {
   private turnstileVerified = false;
   private turnstileWidgetId: string | null = null;
   private turnstileSitekey = '';
+  private authMode: 'password' | 'key' = 'password';
 
   constructor(terminal: SSHTerminal) {
     this.terminal = terminal;
     this.render();
-    this.loadSavedCredentials();
+    if (this.getSessionToken()) {
+      this.consumeSessionToken();
+    } else {
+      this.loadSavedCredentials();
+    }
     this.checkTurnstileConfig();
   }
 
@@ -64,9 +76,7 @@ export class ConnectionForm {
       if (this.turnstileEnabled && this.turnstileSitekey) {
         this.renderTurnstile();
       }
-    } catch {
-      // Config endpoint not available, skip Turnstile
-    }
+    } catch {}
   }
 
   private renderTurnstile(): void {
@@ -80,7 +90,6 @@ export class ConnectionForm {
       sitekey: this.turnstileSitekey,
       theme: 'light',
       callback: async (token: string) => {
-        // Verify with backend and get cookie
         try {
           const response = await fetch('/api/verify', {
             method: 'POST',
@@ -90,7 +99,6 @@ export class ConnectionForm {
           const result = (await response.json()) as { success: boolean };
           if (result.success) {
             this.turnstileVerified = true;
-            // Hide Turnstile widget after successful verification
             const wrapper = document.getElementById('turnstile-container');
             if (wrapper) wrapper.style.display = 'none';
           }
@@ -181,7 +189,6 @@ export class ConnectionForm {
       if (e.key === 'Enter') this.handleConnect();
     });
 
-    // Auth method tab switching
     document.getElementById('auth-tab-password')!.addEventListener('click', () => {
       this.setAuthMode('password');
     });
@@ -189,8 +196,6 @@ export class ConnectionForm {
       this.setAuthMode('key');
     });
   }
-
-  private authMode: 'password' | 'key' = 'password';
 
   private setAuthMode(mode: 'password' | 'key'): void {
     this.authMode = mode;
@@ -202,11 +207,13 @@ export class ConnectionForm {
     if (mode === 'password') {
       pwTab.classList.add('is-active');
       keyTab.classList.remove('is-active');
-      pwSection.style.display = ''; keySection.style.display = 'none';
+      pwSection.style.display = '';
+      keySection.style.display = 'none';
     } else {
       keyTab.classList.add('is-active');
       pwTab.classList.remove('is-active');
-      keySection.style.display = ''; pwSection.style.display = 'none';
+      keySection.style.display = '';
+      pwSection.style.display = 'none';
     }
   }
 
@@ -232,14 +239,15 @@ export class ConnectionForm {
       localStorage.removeItem('cloudssh_cred');
       return;
     }
+
     (document.getElementById('host') as HTMLInputElement).value = cred.host || '';
     (document.getElementById('port') as HTMLInputElement).value = cred.port || '22';
     (document.getElementById('username') as HTMLInputElement).value = cred.username || 'root';
     (document.getElementById('password') as HTMLInputElement).value = cred.password || '';
-    (document.getElementById('private-key') as HTMLTextAreaElement).value = (cred as any).privateKey || '';
+    (document.getElementById('private-key') as HTMLTextAreaElement).value = cred.privateKey || '';
     (document.getElementById('remember-me') as HTMLInputElement).checked = true;
-    
-    if ((cred as any).authMethod === 'key') {
+
+    if (cred.authMethod === 'key' || cred.authMethod === 'publickey') {
       this.setAuthMode('key');
     } else {
       this.setAuthMode('password');
@@ -250,10 +258,8 @@ export class ConnectionForm {
     this.clearError();
     const hostInput = (document.getElementById('host') as HTMLInputElement).value;
     const host = hostInput.replace(/^\[|\]$/g, '').trim();
-    const port = parseInt(
-      (document.getElementById('port') as HTMLInputElement).value || '22'
-    );
-    const username = (document.getElementById('username') as HTMLInputElement).value;
+    const port = parseInt((document.getElementById('port') as HTMLInputElement).value || '22');
+    const username = (document.getElementById('username') as HTMLInputElement).value.trim();
     const password = (document.getElementById('password') as HTMLInputElement).value;
     const privateKey = (document.getElementById('private-key') as HTMLTextAreaElement).value;
     const remember = (document.getElementById('remember-me') as HTMLInputElement).checked;
@@ -273,20 +279,57 @@ export class ConnectionForm {
       return;
     }
 
-    // Check Turnstile if enabled
     if (this.turnstileEnabled && !this.turnstileVerified) {
       this.showError('请完成人机验证');
       return;
     }
 
-    // Save or clear credentials
+    const authMethod = this.authMode === 'key' ? 'publickey' : 'password';
     if (remember) {
-      const encrypted = await encryptCredentials({ host, port: port.toString(), username, password, privateKey, authMethod: this.authMode === 'key' ? 'publickey' : 'password' });
+      const encrypted = await encryptCredentials({
+        host,
+        port: port.toString(),
+        username,
+        password,
+        privateKey,
+        authMethod,
+      });
       localStorage.setItem('cloudssh_cred', encrypted);
     } else {
       localStorage.removeItem('cloudssh_cred');
     }
 
+    await this.openTerminal({ host, port, username, password, authMethod, privateKey });
+  }
+
+  private getSessionToken(): string | null {
+    return new URL(window.location.href).searchParams.get('token');
+  }
+
+  private async consumeSessionToken(): Promise<void> {
+    const token = this.getSessionToken();
+    if (!token) return;
+
+    this.showError('正在读取授权会话...');
+    try {
+      const response = await fetch(`/api/session-token/${encodeURIComponent(token)}`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      const result = await response.json() as { success: boolean; config?: SSHConnectionConfig; error?: string };
+      if (!response.ok || !result.success || !result.config) {
+        throw new Error(result.error || '授权会话无效');
+      }
+
+      window.history.replaceState({}, document.title, window.location.pathname);
+      this.clearError();
+      await this.openTerminal(result.config);
+    } catch (error) {
+      this.showError(error instanceof Error ? error.message : '授权会话无效或已过期');
+    }
+  }
+
+  private async openTerminal(config: SSHConnectionConfig): Promise<void> {
     const authSection = document.getElementById('auth-section')!;
     const termSection = document.getElementById('terminal-section')!;
 
@@ -294,22 +337,15 @@ export class ConnectionForm {
     termSection.classList.remove('hidden');
     termSection.classList.add('flex');
 
-    document.getElementById('term-host')!.textContent = '主机：' + host;
-    document.getElementById('term-user')!.textContent = '用户：' + username;
-    document.getElementById('term-port')!.textContent = '端口：' + port;
+    document.getElementById('term-host')!.textContent = '主机：' + config.host;
+    document.getElementById('term-user')!.textContent = '用户：' + config.username;
+    document.getElementById('term-port')!.textContent = '端口：' + config.port;
 
     this.terminal.mount();
 
     try {
-      await this.terminal.connect({
-        host,
-        port,
-        username,
-        password,
-        authMethod: this.authMode === 'key' ? 'publickey' : 'password',
-        privateKey,
-      });
-    } catch (error) {
+      await this.terminal.connect(config);
+    } catch {
       termSection.classList.add('hidden');
       termSection.classList.remove('flex');
       authSection.classList.remove('hidden');

@@ -43,9 +43,15 @@ export interface SSHConnectionConfig {
   host: string;
   port: number;
   username: string;
-  password: string;
+  password?: string;
   authMethod?: 'password' | 'publickey';
   privateKey?: string;
+}
+
+export interface SessionTokenPayload extends SSHConnectionConfig {
+  expiresAt: number;
+  createdAt: number;
+  label?: string;
 }
 
 export interface Env {
@@ -54,6 +60,7 @@ export interface Env {
   IDLE_TIMEOUT?: string;
   TURNSTILE_SECRET?: string;
   TURNSTILE_SITEKEY?: string;
+  SSH_API_TOKEN?: string;
 }
 
 export const SSH_MSG_DISCONNECT = 1;
