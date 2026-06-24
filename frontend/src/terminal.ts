@@ -384,7 +384,7 @@ export class SSHTerminal {
       `if [ "$dt" -gt 0 ] 2>/dev/null; then CPU=$((100*(dt-di)/dt)); else CPU=-; fi;`,
       `MEM=$(awk '/MemTotal/{t=$2}/MemAvailable/{a=$2}END{if(t>0) printf "%.0f %.0f %.0f",(t-a)/1024,t/1024,(t-a)*100/t; else printf "- - -"}' /proc/meminfo 2>/dev/null);`,
       `SWAP=$(awk '/SwapTotal/{t=$2}/SwapFree/{f=$2}END{if(t>0) printf "%.0f %.0f %.0f",(t-f)/1024,t/1024,(t-f)*100/t; else printf "0 0 0"}' /proc/meminfo 2>/dev/null);`,
-      `DISK=$(df -hPT 2>/dev/null | awk 'NR>1 && $2 !~ /^(tmpfs|devtmpfs|squashfs|overlay|proc|sysfs|cgroup|cgroup2|devpts|securityfs|pstore|efivarfs|debugfs|tracefs|fusectl|configfs|ramfs)$/ {gsub("%","",$6); printf "%s|%s|%s|%s|%s|%s;",$1,$2,$3,$4,$6,$7}');`,
+      `DISK=$(df -hPT 2>/dev/null | awk 'NR>1 && $2 !~ /^(tmpfs|devtmpfs|squashfs|overlay|proc|sysfs|cgroup|cgroup2|devpts|securityfs|pstore|efivarfs|debugfs|tracefs|fusectl|configfs|ramfs)$/ && $7 !~ /^\\/boot($|\\/)/ {gsub("%","",$6); printf "%s|%s|%s|%s|%s|%s;",$1,$2,$3,$4,$6,$7}');`,
       `printf 'system=%s\\ntimezone=%s\\nuptime=%s\\nload=%s\\ncpu=%s\\nmem=%s\\nswap=%s\\ndisk=%s\\n' "$OS" "$TZ" "$UP" "$LOAD" "$CPU" "$MEM" "$SWAP" "$DISK";`,
       `printf '%s\\n' "$__KVMIDC_E";`,
     ].join(' ') + '\n';
