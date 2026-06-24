@@ -384,7 +384,7 @@ export class SSHTerminal {
       `if [ "$dt" -gt 0 ] 2>/dev/null; then CPU=$((100*(dt-di)/dt)); else CPU=-; fi;`,
       `MEM=$(awk '/MemTotal/{t=$2}/MemAvailable/{a=$2}END{if(t>0) printf "%.0f %.0f %.0f",(t-a)/1024,t/1024,(t-a)*100/t; else printf "- - -"}' /proc/meminfo 2>/dev/null);`,
       `SWAP=$(awk '/SwapTotal/{t=$2}/SwapFree/{f=$2}END{if(t>0) printf "%.0f %.0f %.0f",(t-f)/1024,t/1024,(t-f)*100/t; else printf "0 0 0"}' /proc/meminfo 2>/dev/null);`,
-      `DISK=$(df -Pm / 2>/dev/null | awk 'NR==2{gsub("%","",$5); printf "%s %s %s",$3,$2,$5}');`,
+      `DISK=$(df -hPT 2>/dev/null | awk 'NR>1 && $2 !~ /^(tmpfs|devtmpfs|squashfs|overlay|proc|sysfs|cgroup|cgroup2|devpts|securityfs|pstore|efivarfs|debugfs|tracefs|fusectl|configfs|ramfs)$/ {gsub("%","",$6); printf "%s|%s|%s|%s|%s|%s;",$1,$2,$3,$4,$6,$7}');`,
       `printf 'system=%s\\ntimezone=%s\\nuptime=%s\\nload=%s\\ncpu=%s\\nmem=%s\\nswap=%s\\ndisk=%s\\n' "$OS" "$TZ" "$UP" "$LOAD" "$CPU" "$MEM" "$SWAP" "$DISK";`,
       `printf '%s\\n' "$__KVMIDC_E";`,
     ].join(' ') + '\n';
@@ -438,8 +438,39 @@ export class SSHTerminal {
 
     this.renderSizedMetric('metric-memory', 'metric-memory-bar', values.get('mem'));
     this.renderSizedMetric('metric-swap', 'metric-swap-bar', values.get('swap'));
-    this.renderSizedMetric('metric-disk', 'metric-disk-bar', values.get('disk'));
+    this.renderDiskMetrics(values.get('disk'));
     this.setMetricsStatus(new Date().toLocaleTimeString('zh-CN', { hour12: false }));
+  }
+
+  private renderDiskMetrics(value?: string): void {
+    const container = document.getElementById('metric-disk-list');
+    if (!container) return;
+
+    const disks = (value || '')
+      .split(';')
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((item) => {
+        const [filesystem, type, size, used, percent, mount] = item.split('|');
+        return { filesystem, type, size, used, percent: this.toPercent(percent), mount };
+      })
+      .filter((disk) => disk.mount && disk.size && disk.used);
+
+    if (!disks.length) {
+      container.textContent = '--';
+      return;
+    }
+
+    container.innerHTML = disks.map((disk) => `
+      <div class="disk-item">
+        <div class="disk-item-head">
+          <span>${this.escapeHtml(disk.mount)}</span>
+          <small>${disk.percent == null ? '--' : `${disk.percent}%`}</small>
+        </div>
+        <div class="disk-item-body">${this.escapeHtml(disk.used)} / ${this.escapeHtml(disk.size)} · ${this.escapeHtml(disk.filesystem || '-')} ${this.escapeHtml(disk.type || '')}</div>
+        <div class="metric-bar"><i style="width:${disk.percent == null ? 0 : disk.percent}%"></i></div>
+      </div>
+    `).join('');
   }
 
   private renderSizedMetric(textId: string, barId: string, value?: string): void {
@@ -475,6 +506,16 @@ export class SSHTerminal {
   private setBar(id: string, percent: number | null): void {
     const element = document.getElementById(id) as HTMLElement | null;
     if (element) element.style.width = `${percent == null ? 0 : Math.max(0, Math.min(100, percent))}%`;
+  }
+
+  private escapeHtml(value: string): string {
+    return value.replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    }[char] || char));
   }
 
   private setMetricsStatus(value: string): void {
